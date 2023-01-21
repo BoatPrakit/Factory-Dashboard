@@ -1,0 +1,184 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  accountId Int    @id @map("account_id")
+  password   String @db.VarChar(100)
+  @@map("account")
+}
+
+model AvailabilityLose {
+  availabilityId        Int        @id @map("al_id")
+  details      String     @db.VarChar(150)
+  abbreviation String     @db.VarChar(10)
+  downtime     Downtime[]
+  @@map("availability_lose")
+}
+
+model Downtime {
+  downtimeId        Int               @id @map("dt_id")
+  duration          Int
+  timestamp         DateTime          @db.DateTime(0)
+  availabilityId    Int               @map("al_id")
+  stationId         String            @db.VarChar(30) @map("s_id")
+  employeeShiftId   Int               @map("es_id")
+  availabilityLose AvailabilityLose  @relation(fields: [availabilityId], references: [availabilityId], onDelete: NoAction, onUpdate: NoAction, map: "dt_dtd_id")
+  employeeShift    EmployeeShift    @relation(fields: [employeeShiftId], references: [employeeShiftId], onDelete: NoAction, onUpdate: NoAction, map: "dt_es_id")
+  station           Station           @relation(fields: [stationId], references: [stationId], onDelete: NoAction, onUpdate: NoAction, map: "dt_s_id")
+
+  @@index([availabilityId], map: "dtd_id_idx")
+  @@index([employeeShiftId], map: "es_id_idx")
+  @@index([stationId], map: "s_id_idx")
+  @@map("downtime")
+}
+
+model Employee {
+  employeeId          String           @id @db.VarChar(20) @map("em_id")
+  employeeName        String           @db.VarChar(80)   @map("em_name")
+  employeeShift       EmployeeShift[]
+  @@map("employee")
+}
+
+model EmployeeShift {
+  employeeShiftId     Int                  @id      @map("es_id")
+  employeeId     String               @db.VarChar(20)    @map("em_id")
+  overtimeId     Int                @map("ot_id")
+  group     EMPLOYEE_SHIFT_GROUP
+  downtime  Downtime[]
+  employee  Employee             @relation(fields: [employeeId], references: [employeeId], onDelete: NoAction, onUpdate: NoAction, map: "em_id")
+  overtime  Overtime            @relation(fields: [overtimeId], references: [overtimeId], onDelete: NoAction, onUpdate: NoAction, map: "ot_id")
+  failure   Failure[]
+
+  @@index([employeeId], map: "em_id_idx")
+  @@index([overtimeId], map: "ot_id_idx")
+  @@map("employee_shift")
+}
+
+model Failure {
+  failureId                 Int               @map("f_id") @id
+  stationId                 String                 @db.VarChar(30) @map("s_id")
+  employeeShiftId                Int            @map("es_id")
+  failureDetailId                Int          @map("fd_id")
+  position     String?             @db.VarChar(45)
+  employeeShift       EmployeeShift          @relation(fields: [employeeShiftId], references: [employeeShiftId], onDelete: NoAction, onUpdate: NoAction, map: "es_id") 
+  failureDetail       FailureDetail          @relation(fields: [failureDetailId], references: [failureDetailId], onDelete: NoAction, onUpdate: NoAction, map: "fk_failure_failure_detail1")
+  station             Station                @relation(fields: [stationId], references: [stationId], onDelete: NoAction, onUpdate: NoAction, map: "s_id")
+  productHaveFailure  ProductHaveFailure[]
+
+  @@index([employeeShiftId], map: "es_id_idx")
+  @@index([failureDetailId], map: "fk_failure_failure_detail1_idx")
+  @@index([stationId], map: "s_id_idx")
+  @@map("failure")
+}
+
+model FailureDetail {
+  failureDetailId        Int                 @id @map("fd_id")
+  details      String              @db.VarChar(200)
+  type         FAILURE_DETAIL_TYPE
+  abbreviation String?             @db.VarChar(10)
+  failure      Failure[]
+  @@map("failure_detail")
+}
+
+model Line {
+  lineId         Int               @id @map("line_id")
+  lineName       String            @db.VarChar(45) @map("line_name")
+  model           Model[]
+  productionPlan  ProductionPlan[] 
+  station         Station[]
+  @@map("line")
+}
+
+model Model {
+  modelId   Int       @id @map("model_id")
+  modelName String    @db.VarChar(45) @map("model_name")
+  lineId    Int @map("line_id")
+  line       Line      @relation(fields: [lineId], references: [lineId], onDelete: NoAction, onUpdate: NoAction, map: "line_id")
+  product    Product[]
+
+  @@index([lineId], map: "fab_id_idx")
+  @@map("model")
+}
+
+model Overtime {
+  overtimeId          Int              @id @map("ot_id")
+  description    String           @db.VarChar(45)
+  duration       Int
+  employeeShift  EmployeeShift[] 
+  @@map("over_time")
+}
+
+model Product {
+  productId           Int                  @id @map("product_id")
+  serialNumber        String                 @db.VarChar(50) @map("serial_number")
+  isGoods             Int                    @db.TinyInt @map("is_goods")
+  modelId             Int                   @map("model_id")
+  timestamp            DateTime               @db.DateTime(0)
+  model                Model                  @relation(fields: [modelId], references: [modelId], onDelete: NoAction, onUpdate: NoAction, map: "fk_product_model1")
+  productHaveFailure ProductHaveFailure[] 
+
+  @@index([modelId], map: "fk_product_model1_idx")
+  @@map("product")
+}
+
+model ProductHaveFailure {
+  failureId       Int @map("f_id")
+  productId Int @map("product_id")
+  failure            Failure @relation(fields: [failureId], references: [failureId], onDelete: NoAction, onUpdate: NoAction, map: "fk_failure_has_product_failure1")
+  product            Product @relation(fields: [productId], references: [productId], onDelete: NoAction, onUpdate: NoAction, map: "fk_failure_has_product_product1")
+
+  @@id([failureId, productId])
+  @@index([failureId], map: "fk_failure_has_product_failure1_idx")
+  @@index([productId], map: "fk_failure_has_product_product1_idx")
+}
+
+model ProductionPlan {
+  productionPlanId         Int @map("p_id")
+  timestamp    DateTime              @db.DateTime(0)
+  target       Int
+  shift        PRODUCTION_PLAN_SHIFT
+  isOvertime Int                   @db.TinyInt @map("is_over_time")
+  group        EMPLOYEE_SHIFT_GROUP
+  lineId      Int @map("line_id")
+  line         Line                  @relation(fields: [lineId], references: [lineId], onDelete: NoAction, onUpdate: NoAction, map: "fk_production_plan_line1")
+
+  @@id([productionPlanId, lineId])
+  @@index([lineId], map: "fk_production_plan_line1_idx")
+  @@map("production_plan")
+}
+
+model Station {
+  stationId         String     @id @db.VarChar(30) @map("s_id")
+  stationName String     @db.VarChar(45) @map("station_name")
+  lineId      Int @map("line_id")
+  cycleTime   Int @map("cycle_time")
+  downtime     Downtime[]
+  failure      Failure[]
+  line         Line       @relation(fields: [lineId], references: [lineId], onDelete: NoAction, onUpdate: NoAction, map: "st_line_id")
+
+  @@index([lineId], map: "line_id_idx")
+  @@map("station")
+}
+
+enum FAILURE_DETAIL_TYPE {
+  SCRAP
+  REPAIR
+  REWORK
+  Q_GATE @map("Q-GATE")
+}
+
+enum EMPLOYEE_SHIFT_GROUP {
+  A
+  B
+}
+
+enum PRODUCTION_PLAN_SHIFT {
+  DAY
+  NIGHT
+}
