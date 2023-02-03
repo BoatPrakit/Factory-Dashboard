@@ -7,6 +7,7 @@ import { DashboardDateDto } from './dto/dashboard-date.dto';
 import {
   DashboardBase,
   DashboardDateResponse,
+  DowntimeDefect,
   FailureDefect,
 } from './interface/dashboard.interface';
 
@@ -44,9 +45,47 @@ export class DashboardService {
       lineId,
       date,
     );
+    const { downtimeDefect, downtimeTotal } = await this.mappingDowntime(
+      lineId,
+      date,
+    );
     return {
       failureDefect,
       failureTotal,
+      downtimeDefect,
+      downtimeTotal,
+    };
+  }
+
+  async mappingDowntime(
+    lineId: number,
+    { startDate, endDate }: { startDate: Date; endDate: Date },
+  ): Promise<{ downtimeDefect: DowntimeDefect[]; downtimeTotal: number }> {
+    const downtimes = await this.findAllDowntimeBetween(
+      lineId,
+      startDate,
+      endDate,
+    );
+    const downtimeDefect = _.chain(downtimes)
+      .uniqBy((downtime) => downtime.availabilityId)
+      .map(
+        (downtime): DowntimeDefect => ({
+          details: downtime.availabilityLose.details,
+          downtime: downtimes
+            .filter((dt) => dt.availabilityId === downtime.availabilityId)
+            .reduce((total, dt) => dt.duration + total, 0),
+          id: downtime.availabilityId,
+          station: downtime.stationId,
+        }),
+      )
+      .value();
+    const downtimeTotal = downtimeDefect.reduce(
+      (total, downtime) => downtime.downtime + total,
+      0,
+    );
+    return {
+      downtimeDefect,
+      downtimeTotal,
     };
   }
 
@@ -89,6 +128,20 @@ export class DashboardService {
       failureDefect,
       failureTotal,
     };
+  }
+
+  private async findAllDowntimeBetween(
+    lineId: number,
+    startDate: Date,
+    endDate: Date,
+  ) {
+    return await this.prisma.downtime.findMany({
+      where: {
+        station: { lineId: lineId },
+        timestamp: { gte: startDate, lte: endDate },
+      },
+      include: { availabilityLose: true },
+    });
   }
 
   private async findAllFailureBetween(

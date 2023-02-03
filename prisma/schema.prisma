@@ -14,9 +14,10 @@ model Account {
 }
 
 model AvailabilityLose {
-  availabilityId        Int        @id @map("al_id") @default(autoincrement())
+  availabilityId        String        @id @map("al_id") 
   details      String     @db.VarChar(150)
-  abbreviation String     @db.VarChar(10)
+  lineId       Int        @map("line_id")
+  line         Line       @relation(fields: [lineId], references: [lineId])
   downtime     Downtime[]
   @@map("availability_lose")
 }
@@ -25,7 +26,7 @@ model Downtime {
   downtimeId        Int               @id @map("dt_id") @default(autoincrement())
   duration          Int
   timestamp         DateTime          @db.DateTime(0)
-  availabilityId    Int               @map("al_id")
+  availabilityId    String               @map("al_id")
   stationId         String            @db.VarChar(30) @map("s_id")
   employeeShiftId   Int               @map("es_id")
   availabilityLose AvailabilityLose  @relation(fields: [availabilityId], references: [availabilityId], onDelete: NoAction, onUpdate: NoAction, map: "dt_dtd_id")
@@ -95,7 +96,8 @@ model Line {
   model           Model[]
   productionPlan  ProductionPlan[] 
   station         Station[]
-  failureDetail FailureDetail[]
+  failureDetail   FailureDetail[]
+  downtime        AvailabilityLose[]
   @@map("line")
 }
 
@@ -117,6 +119,7 @@ model WorkingTime {
   duration       Int
   lineId         Int
   line           Line @relation(fields: [lineId], references: [lineId])
+  productionPlan  ProductionPlan[]
   employeeShift  EmployeeShift[] 
   @@map("working_time")
 }
@@ -152,11 +155,11 @@ model ProductionPlan {
   productionPlanId         Int @map("p_id") @default(autoincrement())
   timestamp    DateTime              @db.DateTime(0)
   target       Int
-  shift        SHIFT
-  isOvertime   Boolean                   @db.TinyInt @map("is_over_time")
+  workingTimeId Int
   group        EMPLOYEE_SHIFT_GROUP
   lineId      Int @map("line_id")
   line         Line                  @relation(fields: [lineId], references: [lineId], onDelete: NoAction, onUpdate: NoAction, map: "fk_production_plan_line1")
+  workingTime   WorkingTime         @relation(fields: [workingTimeId], references: [workingTimeId])
 
   @@id([productionPlanId, lineId])
   @@index([lineId], map: "fk_production_plan_line1_idx")

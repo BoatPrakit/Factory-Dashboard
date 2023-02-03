@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { SHIFT, WORKING_TIME_TYPE } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
@@ -16,8 +17,10 @@ export class EmployeeService {
     return await this.prisma.employee.findMany();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} employee`;
+  async findOneByShift(lineId: number, shift: SHIFT, type: WORKING_TIME_TYPE) {
+    return await this.prisma.workingTime.findFirst({
+      where: { lineId, shift, type },
+    });
   }
 
   update(id: number, updateEmployeeDto: UpdateEmployeeDto) {

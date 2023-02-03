@@ -3,7 +3,7 @@ type WorkingTime = {
   min: number;
 };
 
-type DowntimeDefect = {
+export type DowntimeDefect = {
   id: string;
   details: string;
   station: string;
@@ -22,8 +22,8 @@ export interface DashboardBase {
   //   availability: number;
   //   performace: number;
   //   target: number;
-  //   downtimeDefect: DowntimeDefect[];
-  //   downtimeTotal: number;
+  downtimeDefect: DowntimeDefect[];
+  downtimeTotal: number;
   failureDefect: FailureDefect[];
   failureTotal: number;
 }
@@ -37,6 +37,4 @@ export interface DashboardDateResponse extends DashboardBase {
   //   plan: number;
   //   workingTime: WorkingTime[];
   //   bottleNeck: string;
-  //   downtimeDefect: DowntimeDefect[];
-  //   downtimeTotal: number;
 }
