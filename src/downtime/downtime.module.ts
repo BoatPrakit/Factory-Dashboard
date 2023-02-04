@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { DowntimeService } from './downtime.service';
 import { DowntimeController } from './downtime.controller';
-import { EmployeeModule } from 'src/employee/employee.module';
+import { WorkingTimeModule } from 'src/working-time/working-time.module';
 
 @Module({
-  imports: [EmployeeModule],
+  imports: [WorkingTimeModule],
   controllers: [DowntimeController],
   providers: [DowntimeService],
 })

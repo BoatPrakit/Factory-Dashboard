@@ -17,12 +17,6 @@ export class EmployeeService {
     return await this.prisma.employee.findMany();
   }
 
-  async findOneByShift(lineId: number, shift: SHIFT, type: WORKING_TIME_TYPE) {
-    return await this.prisma.workingTime.findFirst({
-      where: { lineId, shift, type },
-    });
-  }
-
   update(id: number, updateEmployeeDto: UpdateEmployeeDto) {
     return `This action updates a #${id} employee`;
   }

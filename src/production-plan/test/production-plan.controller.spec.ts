@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ProductionPlanController } from './production-plan.controller';
-import { ProductionPlanService } from './production-plan.service';
+import { ProductionPlanController } from '../production-plan.controller';
+import { ProductionPlanService } from '../production-plan.service';
 
 describe('ProductionPlanController', () => {
   let controller: ProductionPlanController;

@@ -4,6 +4,7 @@ import { StationController } from './station.controller';
 
 @Module({
   controllers: [StationController],
-  providers: [StationService]
+  providers: [StationService],
+  exports: [StationService],
 })
 export class StationModule {}

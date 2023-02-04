@@ -1,4 +1,4 @@
-type WorkingTime = {
+export type WorkingTime = {
   time: string;
   min: number;
 };
@@ -18,23 +18,20 @@ export type FailureDefect = {
 };
 
 export interface DashboardBase {
-  //   oee: number;
-  //   availability: number;
-  //   performace: number;
-  //   target: number;
+  oee: number;
+  availability: number;
+  performance: number;
+  quality: number;
+  target: number;
   downtimeDefect: DowntimeDefect[];
   downtimeTotal: number;
   failureDefect: FailureDefect[];
+  workingTime: WorkingTime;
   failureTotal: number;
+  actual: number;
 }
 
 export interface DashboardDateResponse extends DashboardBase {
-  actual: number;
-  //   oee: number;
-  //   availability: number;
-  //   performace: number;
-  //   target: number;
-  //   plan: number;
-  //   workingTime: WorkingTime[];
-  //   bottleNeck: string;
+  plan: number;
+  bottleNeck: string;
 }

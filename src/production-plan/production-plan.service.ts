@@ -35,10 +35,16 @@ export class ProductionPlanService {
     return productionPlans;
   }
 
-  async findProductionPlansByDate(date: string) {
-    const { startDate, endDate } = getStartDateAndEndDate(date);
+  async findProductionPlansByDate({
+    startDate,
+    endDate,
+  }: {
+    startDate: Date;
+    endDate: Date;
+  }) {
     return await this.prisma.productionPlan.findMany({
       where: { timestamp: { gte: startDate, lte: endDate } },
+      include: { workingTime: true },
     });
   }
 }
