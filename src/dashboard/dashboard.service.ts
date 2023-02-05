@@ -10,6 +10,8 @@ import {
   getStartDateAndEndDate,
 } from 'src/utils/interceptor/date.utils';
 import { DashboardDateDto } from './dto/dashboard-date.dto';
+import { DashboardMonthDto } from './dto/dashboard-month.dto';
+import { DashboardWeekDto } from './dto/dashboard-week.dto';
 import {
   DashboardBase,
   DashboardDateResponse,
@@ -24,8 +26,36 @@ export class DashboardService {
     private prisma: PrismaService,
     private productService: ProductService,
     private productionPlanService: ProductionPlanService,
-    private stationService: StationService,
   ) {}
+
+  async getDashboardByMonth({
+    lineId,
+    month,
+    year,
+  }: DashboardMonthDto): Promise<DashboardBase> {
+    const startDate = moment([year, month - 1])
+      .startOf('month')
+      .toDate()
+      .toISOString();
+    const endDate = moment(startDate).endOf('month').toDate().toISOString();
+    const date = getStartDateAndEndDate(startDate, endDate);
+    const baseDashboard = await this.mappingDashboard(lineId, date);
+    return baseDashboard;
+  }
+
+  async getDashboardByWeek(
+    dashboardWeekDto: DashboardWeekDto,
+  ): Promise<DashboardBase> {
+    const date = getStartDateAndEndDate(
+      dashboardWeekDto.startDate,
+      dashboardWeekDto.endDate,
+    );
+    const baseDashboard = await this.mappingDashboard(
+      dashboardWeekDto.lineId,
+      date,
+    );
+    return baseDashboard;
+  }
 
   async getDashboardByDate(
     dashboardDate: DashboardDateDto,
@@ -50,14 +80,7 @@ export class DashboardService {
         sevenAmOnToday.toDate(),
         new Date(),
       );
-      const allStationInLine = await this.stationService.findAllStationByLineId(
-        dashboardDate.lineId,
-      );
-      plan = allStationInLine.reduce(
-        (total, station) =>
-          Math.floor(Math.floor(diffMinutes) / station.cycleTime) + total,
-        0,
-      );
+      plan = Math.floor(Math.floor(diffMinutes) / stationBottleNeck.cycleTime);
     } else plan = baseDashboard.target;
 
     return {
@@ -114,7 +137,7 @@ export class DashboardService {
     const actual = goods.length;
     const workingTime = await this.mappingWorkingTime(date);
 
-    const performance = (actual * 100) / target || 0;
+    const performance = target > 0 ? (actual * 100) / target : 0;
     const quality = actual > 0 ? ((actual - failureTotal) * 100) / actual : 0;
     const availability =
       ((workingTime.min - downtimeTotal) * 100) / workingTime.min || 0;

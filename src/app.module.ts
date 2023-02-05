@@ -13,6 +13,7 @@ import { EmployeeModule } from './employee/employee.module';
 import { ProductionPlanModule } from './production-plan/production-plan.module';
 import { DowntimeModule } from './downtime/downtime.module';
 import { AvaiabilityLoseModule } from './availability-lose/availability-lose.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { AvaiabilityLoseModule } from './availability-lose/availability-lose.mod
     ProductionPlanModule,
     DowntimeModule,
     AvaiabilityLoseModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

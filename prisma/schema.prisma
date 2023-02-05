@@ -8,7 +8,8 @@ datasource db {
 }
 
 model Account {
-  accountId Int    @id @map("account_id")
+  accountId Int    @id @map("account_id") @default(autoincrement())
+  email       String @db.VarChar(50)
   password   String @db.VarChar(100)
   @@map("account")
 }
