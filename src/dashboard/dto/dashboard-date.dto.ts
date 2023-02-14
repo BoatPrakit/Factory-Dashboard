@@ -1,4 +1,5 @@
-import { IsDateString, IsNotEmpty, IsNumber } from 'class-validator';
+import { SHIFT } from '@prisma/client';
+import { IsDateString, IsEnum, IsNotEmpty, IsNumber } from 'class-validator';
 
 export class DashboardDateDto {
   @IsNotEmpty()
@@ -8,4 +9,8 @@ export class DashboardDateDto {
   @IsNotEmpty()
   @IsDateString()
   targetDate: string;
+
+  @IsNotEmpty()
+  @IsEnum(SHIFT)
+  shift: SHIFT;
 }

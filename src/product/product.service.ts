@@ -107,6 +107,7 @@ export class ProductService {
       data: {
         failureId: failure.failureId,
         productId: existProduct ? existProduct.productId : product.productId,
+        timestamp: createProductDto.timestamp,
       },
     });
     return product;

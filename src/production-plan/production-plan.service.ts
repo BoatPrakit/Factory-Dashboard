@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { SHIFT } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { getStartDateAndEndDate } from 'src/utils/interceptor/date.utils';
 import { CreateProductionPlanDto } from './dto/create-production-plan.dto';
 
 @Injectable()
@@ -35,15 +35,21 @@ export class ProductionPlanService {
     return productionPlans;
   }
 
-  async findProductionPlansByDate({
-    startDate,
-    endDate,
-  }: {
-    startDate: Date;
-    endDate: Date;
-  }) {
+  async findProductionPlansByDate(
+    {
+      startDate,
+      endDate,
+    }: {
+      startDate: Date;
+      endDate: Date;
+    },
+    shift?: SHIFT,
+  ) {
     return await this.prisma.productionPlan.findMany({
-      where: { timestamp: { gte: startDate, lte: endDate } },
+      where: {
+        timestamp: { gte: startDate, lte: endDate },
+        workingTime: shift ? { shift } : undefined,
+      },
       include: { workingTime: true },
     });
   }

@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { ProductionPlan, SHIFT, WORKING_TIME_TYPE } from '@prisma/client';
 import * as _ from 'lodash';
 import * as moment from 'moment';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -7,6 +8,7 @@ import { ProductionPlanService } from 'src/production-plan/production-plan.servi
 import { StationService } from 'src/station/station.service';
 import {
   diffTimeAsMinutes,
+  getShiftTimings,
   getStartDateAndEndDate,
 } from 'src/utils/interceptor/date.utils';
 import { DashboardDateDto } from './dto/dashboard-date.dto';
@@ -61,9 +63,18 @@ export class DashboardService {
     dashboardDate: DashboardDateDto,
   ): Promise<DashboardDateResponse> {
     const date = getStartDateAndEndDate(dashboardDate.targetDate);
-    const baseDashboard = await this.mappingDashboard(
-      dashboardDate.lineId,
+    const plans = await this.productionPlanService.findProductionPlansByDate(
       date,
+    );
+    const targetPlan = plans.find(
+      (plan) => plan.workingTime.shift === dashboardDate.shift,
+    );
+    if (!targetPlan)
+      throw new BadRequestException('Production plan not has your shift');
+    const timeShift = getShiftTimings(
+      dashboardDate.shift,
+      targetPlan.workingTime.type,
+      date.startDate,
     );
     const stationBottleNeck = await this.prisma.station.findFirst({
       where: { lineId: dashboardDate.lineId },
@@ -71,7 +82,16 @@ export class DashboardService {
     });
 
     let plan = 0;
-    if (moment(dashboardDate.targetDate).isSame(new Date(), 'day')) {
+    const isToday = moment(dashboardDate.targetDate).isSame(new Date(), 'day');
+    const baseDashboard = await this.mappingDashboard(
+      dashboardDate.lineId,
+      timeShift,
+      date,
+      dashboardDate.shift,
+      targetPlan.workingTime.type,
+      isToday,
+    );
+    if (isToday) {
       const sevenAmOnToday = moment(dashboardDate.targetDate)
         .set('hour', 7)
         .set('minute', 30);
@@ -90,32 +110,46 @@ export class DashboardService {
     };
   }
 
-  async mappingWorkingTime(date: {
-    startDate: Date;
-    endDate: Date;
-  }): Promise<WorkingTime> {
+  async mappingWorkingTime(
+    date: {
+      startDate: Date;
+      endDate: Date;
+    },
+    shift?: SHIFT,
+    workingTime?: WORKING_TIME_TYPE,
+    isToday?: boolean,
+  ): Promise<WorkingTime> {
     const plans = await this.productionPlanService.findProductionPlansByDate(
       date,
+      isToday ? shift : undefined,
     );
     const mins = plans.reduce(
       (total, plan) => plan.workingTime.duration + total,
       0,
     );
-    const timeString = `ALL_DAY`;
-    // switch (workingTime.type) {
-    //   case 'NOT_OVERTIME':
-    //     timeString = 'NO_OT';
-    //     break;
-    //   case 'OVERTIME':
-    //     timeString = 'OT';
-    // }
-    // timeString += ` ${workingTime.shift}`;
+    let timeString = `ALL_DAY`;
+    if (shift && workingTime && isToday) {
+      let workingTimeType: string;
+      switch (workingTime) {
+        case 'NOT_OVERTIME':
+          workingTimeType = 'NO OT';
+          break;
+        case 'OVERTIME':
+          workingTimeType = 'OT';
+          break;
+      }
+      timeString = `${workingTimeType} ${shift}`;
+    }
     return { time: timeString, min: mins };
   }
 
   async mappingDashboard(
     lineId: number,
     date: { startDate: Date; endDate: Date },
+    baseDate?: { startDate: Date; endDate: Date },
+    shift?: SHIFT,
+    workingTimeType?: WORKING_TIME_TYPE,
+    isToday?: boolean,
   ): Promise<DashboardBase> {
     const { failureDefect, failureTotal } = await this.mappingFailure(
       lineId,
@@ -126,7 +160,8 @@ export class DashboardService {
       date,
     );
     const plans = await this.productionPlanService.findProductionPlansByDate(
-      date,
+      baseDate || date,
+      isToday ? shift : undefined,
     );
     const target = plans.reduce((total, plan) => plan.target + total, 0);
     const goods = await this.productService.findAllProductBetween(
@@ -135,12 +170,19 @@ export class DashboardService {
       date.endDate,
     );
     const actual = goods.length;
-    const workingTime = await this.mappingWorkingTime(date);
+    const workingTime = await this.mappingWorkingTime(
+      baseDate || date,
+      shift,
+      workingTimeType,
+      isToday,
+    );
 
     const performance = target > 0 ? (actual * 100) / target : 0;
     const quality = actual > 0 ? ((actual - failureTotal) * 100) / actual : 0;
     const availability =
-      ((workingTime.min - downtimeTotal) * 100) / workingTime.min || 0;
+      workingTime.min > 0
+        ? ((workingTime.min - downtimeTotal) * 100) / workingTime.min
+        : 0;
     const oee = (performance * availability * quality) / Math.pow(100, 2);
     return {
       failureDefect,
