@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { AvailabilityLoseService } from './availability-lose.service';
 import { CreateAvailabilityLoseDto } from './dto/create-availability-lose.dto';
 
@@ -11,5 +11,10 @@ export class AvailabilityLoseController {
   @Post()
   async create(@Body() payload: CreateAvailabilityLoseDto) {
     return await this.availabilityLoseService.create(payload);
+  }
+
+  @Get('/:lineId')
+  async getAvailabilityLoseByLineId(@Param('lineId') lineId: string) {
+    return await this.availabilityLoseService.findManyByLineId(+lineId);
   }
 }
