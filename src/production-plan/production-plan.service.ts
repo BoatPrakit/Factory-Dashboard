@@ -36,6 +36,7 @@ export class ProductionPlanService {
   }
 
   async findProductionPlansByDate(
+    lineId: number,
     {
       startDate,
       endDate,
@@ -47,6 +48,7 @@ export class ProductionPlanService {
   ) {
     return await this.prisma.productionPlan.findMany({
       where: {
+        lineId,
         timestamp: { gte: startDate, lte: endDate },
         workingTime: shift ? { shift } : undefined,
       },
