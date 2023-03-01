@@ -34,4 +34,7 @@ export interface DashboardBase {
 export interface DashboardDateResponse extends DashboardBase {
   plan: number;
   bottleNeck: string;
+  group: string;
+  startAt: Date;
+  endAt: Date;
 }

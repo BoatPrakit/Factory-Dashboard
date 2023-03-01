@@ -77,15 +77,33 @@ export class ProductService {
     const existEmployee = await this.prisma.employee.findUnique({
       where: { employeeId: employee.employeeId },
     });
+    if (!existEmployee)
+      throw new BadRequestException('employee data not found');
     const employeeShift = await this.prisma.employeeShift.findFirst({
       where: {
-        employeeId: employee.employeeId,
+        employeeId: existEmployee.employeeId,
         group: employee.group,
         workingTimeId: workingTime.workingTimeId,
       },
     });
-    if (!existEmployee)
-      throw new BadRequestException('employee data not found');
+    const failureDetail = await this.prisma.failureDetail.findFirst({
+      where: {
+        failureDetailId: defect.failureDetailId,
+        lineId: model.lineId,
+      },
+    });
+    if (!failureDetail)
+      throw new BadRequestException(
+        'failure detail id is invalid, maybe it not exist in this fabricator line',
+      );
+    const station = await this.prisma.station.findFirst({
+      where: { stationId: defect.stationId, lineId: model.lineId },
+    });
+    if (!station)
+      throw new BadRequestException(
+        'station id is invalid, maybe it not exist in this fabricator line',
+      );
+
     const failure = await this.prisma.failure.create({
       data: {
         position: defect.position,
@@ -102,7 +120,7 @@ export class ProductService {
                 connect: { workingTimeId: workingTime.workingTimeId },
               },
             },
-            where: { employeeShiftId: employeeShift.employeeShiftId },
+            where: { employeeShiftId: employeeShift?.employeeShiftId || -1 },
           },
         },
       },

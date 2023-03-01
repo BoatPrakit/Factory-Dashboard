@@ -11,6 +11,7 @@ import {
   getShiftTimings,
   getStartDateAndEndDate,
 } from 'src/utils/interceptor/date.utils';
+import { TimeRangeType, TIME_RANGE } from 'src/utils/time-range';
 import { DashboardDateDto } from './dto/dashboard-date.dto';
 import { DashboardMonthDto } from './dto/dashboard-month.dto';
 import { DashboardWeekDto } from './dto/dashboard-week.dto';
@@ -96,11 +97,12 @@ export class DashboardService {
       dateDto.targetDate = moment(dashboardWeekDto.startDate)
         .add(index, 'day')
         .toISOString();
+      // console.log(dateDto.targetDate);
       return this.getDashboardByDate(dateDto);
     });
 
     const dashboardDates = await Promise.all([...dashboardDatePromises]);
-    console.log(dashboardDates.filter((d) => d !== undefined));
+    // console.log(dashboardDates.filter((d) => d !== undefined));
     const defaultDashboard: DashboardBase = {
       actual: 0,
       availability: 0,
@@ -177,7 +179,6 @@ export class DashboardService {
     const date = getStartDateAndEndDate(dashboardDate.targetDate);
     const plans = await this.productionPlanService.findProductionPlansByDate(
       dashboardDate.lineId,
-
       date,
     );
     const targetPlan = plans.find(
@@ -194,35 +195,82 @@ export class DashboardService {
       where: { lineId: dashboardDate.lineId },
       orderBy: { cycleTime: 'desc' },
     });
-
+    if (!stationBottleNeck)
+      throw new BadRequestException('station bottle neck is not exist');
     let plan = 0;
     const isToday = moment(dashboardDate.targetDate).isSame(new Date(), 'day');
+    const isFuture = moment().isBefore(dashboardDate.targetDate);
+    const isNowInTimeShiftRange = moment().isBetween(
+      timeShift.startDate,
+      timeShift.endDate,
+    );
+
     const baseDashboard = await this.mappingDashboard(
       dashboardDate.lineId,
       timeShift,
       dashboardDate.shift,
       date,
       targetPlan.workingTime.type,
-      isToday,
+      isToday || isFuture,
     );
-    if (isToday) {
-      const sevenAmOnToday = moment(dashboardDate.targetDate)
-        .set('hour', 7)
-        .set('minute', 30);
+    if (isToday && isNowInTimeShiftRange) {
+      // let hour = TIME_RANGE.DAY_NOT_OT.start.hour;
+      // let minute = TIME_RANGE.DAY_NOT_OT.start.minute;
+      // if (dashboardDate.shift === 'NIGHT') {
+      //   switch (targetPlan.workingTime.type) {
+      //     case 'OVERTIME':
+      //       hour = 18;
+      //       minute = 0;
+      //       break;
+      //     case 'NOT_OVERTIME':
+      //       hour = 22;
+      //       minute = 0;
+      //   }
+      // }
+      // const initTime = moment(dashboardDate.targetDate)
+      //   .set('hour', hour)
+      //   .set('minute', minute);
 
-      const diffMinutes = diffTimeAsMinutes(
-        sevenAmOnToday.toDate(),
-        new Date(),
-      );
+      // const testDate = moment()
+      const diffMinutes = diffTimeAsMinutes(timeShift.startDate, new Date());
       plan = Math.floor(Math.floor(diffMinutes) / stationBottleNeck.cycleTime);
-    } else plan = baseDashboard.target;
+      if (plan < 0) plan = 0;
+    } else {
+      plan = baseDashboard.target;
+      if (isFuture) plan = 0;
+    }
 
     return {
       ...baseDashboard,
       bottleNeck: stationBottleNeck?.stationId || '',
       plan,
+      group: targetPlan.group,
+      startAt: timeShift.startDate,
+      endAt: timeShift.endDate,
     };
   }
+
+  // isNowAfterTimeShift(start: Date, end: Date) {
+  //   return
+  // }
+
+  // getDateBetweenNightTodayAndEndNight(workingTimeType: WORKING_TIME_TYPE) {
+  //   let hour = TIME_RANGE.NIGHT_NOT_OT.start.hour;
+  //   let minute = TIME_RANGE.NIGHT_NOT_OT.start.minute;
+  //   if (workingTimeType === 'OVERTIME') {
+  //     hour = TIME_RANGE.NIGHT_OT.start.hour;
+  //     minute = TIME_RANGE.NIGHT_OT.start.minute;
+  //   }
+  //   const start = moment().set('hour', hour).set('minute', minute);
+  //   const end = moment()
+  //     .add('day', 1)
+  //     .set('hour', TIME_RANGE.NIGHT_NOT_OT.end.hour)
+  //     .set('minute', TIME_RANGE.NIGHT_NOT_OT.end.minute);
+  //   return {
+  //     startDate: start,
+  //     endDate: end,
+  //   };
+  // }
 
   async mappingWorkingTime(
     lineId: number,
@@ -264,7 +312,7 @@ export class DashboardService {
     shift: SHIFT,
     baseDate?: { startDate: Date; endDate: Date },
     workingTimeType?: WORKING_TIME_TYPE,
-    isToday?: boolean,
+    isDate?: boolean,
   ): Promise<DashboardBase> {
     const { failureDefect, failureTotal } = await this.mappingFailure(
       lineId,
@@ -277,7 +325,7 @@ export class DashboardService {
     const plans = await this.productionPlanService.findProductionPlansByDate(
       lineId,
       baseDate || date,
-      isToday ? shift : undefined,
+      isDate ? shift : undefined,
     );
     const target = plans.reduce((total, plan) => plan.target + total, 0);
     const goods = await this.productService.findAllProductBetween(
