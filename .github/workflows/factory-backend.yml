@@ -20,11 +20,10 @@ jobs:
          username: ${{ github.repository_owner }}
          password: ${{ secrets.TOKEN_FACTORY_DASHBOARD }}
          
-#     - name: Create env file
-#       run: |
-#           touch .env
-#           echo DATABASE_URL=${{ secrets.DATABASE_URL }} >> .env
-#           echo TOKEN=${{ secrets.TOKEN }} >> .env
+    - name: Create env file
+      run: |
+          touch .env
+
          
     - name: Build image and push Dockerfile
       uses: docker/build-push-action@v2
