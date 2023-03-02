@@ -1,0 +1,60 @@
+name: Back-end
+
+on:
+  push:
+    branches: main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Chekout code
+      uses: actions/checkout@v2
+
+      
+    - name: Login to Github registry ghcr
+      uses: docker/login-action@v1
+      with:
+         registry: ghcr.io
+         username: ${{ github.repository_owner }}
+         password: ${{ secrets.TOKEN_FACTORY_DASHBOARD }}
+         
+#     - name: Create env file
+#       run: |
+#           touch .env
+#           echo DATABASE_URL=${{ secrets.DATABASE_URL }} >> .env
+#           echo TOKEN=${{ secrets.TOKEN }} >> .env
+         
+#     - name: Build image and push Dockerfile
+#       uses: docker/build-push-action@v2
+#       with:
+#         file: ./Dockerfile
+#         context: .
+#         push: true
+#         tags: ghcr.io/integratedproject-ii/back-end:main
+   
+#     - name: Publish compose file
+#       uses: appleboy/scp-action@master
+#       with: 
+#          host: ${{ secrets.HOST }}
+#          username: ${{ secrets.USERNAME }}
+#          password: ${{ secrets.PASSWORD }}
+#          source: ./docker-compose.yml
+#          target: ~/Docker-back-end
+    
+#   deploy:
+#       needs: build
+#       runs-on: ubuntu-latest
+#       steps:
+      
+#       - name: Deploy execute command ssh to remote server
+#         uses: appleboy/ssh-action@master
+#         with:
+#          host: ${{ secrets.HOST }}
+#          username: ${{ secrets.USERNAME }}
+#          password: ${{ secrets.PASSWORD }}
+#          script: |
+#            docker-compose -f Docker-back-end/docker-compose.yml down 
+#            docker pull ghcr.io/integratedproject-ii/back-end:main 
+#            docker-compose -f Docker-back-end/docker-compose.yml up -d 
