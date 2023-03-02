@@ -211,7 +211,7 @@ export class DashboardService {
       dashboardDate.shift,
       date,
       targetPlan.workingTime.type,
-      isToday || isFuture,
+      true,
     );
     if (isToday && isNowInTimeShiftRange) {
       // let hour = TIME_RANGE.DAY_NOT_OT.start.hour;
