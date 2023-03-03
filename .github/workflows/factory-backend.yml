@@ -31,7 +31,7 @@ jobs:
         file: ./Dockerfile
         context: .
         push: true
-        tags: ghcr.io/factory-dashboard/back-end:main
+        tags: ghcr.io/factory-dashboard:main
    
     - name: Publish compose file
       uses: appleboy/ssh-action@v0.1.8
