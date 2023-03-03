@@ -2,3 +2,7 @@ version: "3.8"
 services:
   backend:
     image: ghcr.io/factory-dashboard/back-end:main
+networks:
+    default:
+        external:
+            name: factory_dashboard_network
