@@ -31,7 +31,7 @@ jobs:
         file: ./Dockerfile
         context: .
         push: true
-        tags: ghcr.io/factory-dashboard/backend:main
+        tags: ghcr.io/${{ github.repository_owner }}/backend:main
    
     - name: Publish compose file
       uses: appleboy/ssh-action@v0.1.8
