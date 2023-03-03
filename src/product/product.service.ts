@@ -2,7 +2,9 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { Model, Product } from '@prisma/client';
 import { AlertService } from 'src/alert/alert.service';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { getStartDateAndEndDate } from 'src/utils/interceptor/date.utils';
 import { CreateProductDto } from './dto/create-product.dto';
+import { GetProductDto } from './dto/get-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductQuery } from './interface/product-query.interface';
 
@@ -157,5 +159,45 @@ export class ProductService {
     return await this.prisma.product.findUnique({
       where: { productId: id },
     });
+  }
+
+  async findAllProductByFilter({
+    lineId,
+    pagination,
+    endAt,
+    startAt,
+  }: GetProductDto) {
+    const now = new Date().toISOString();
+    const date = getStartDateAndEndDate(startAt || now, endAt);
+    const productsWithOutFilter = await this.prisma.product.findMany({
+      where: {
+        timestamp: { gte: date.startDate, lte: date.endDate },
+        model: { lineId },
+      },
+    });
+    const products = await this.prisma.product.findMany({
+      where: {
+        timestamp: { gte: date.startDate, lte: date.endDate },
+        model: { lineId },
+      },
+      include: {
+        productHaveFailure: {
+          include: { failure: { include: { failureDetail: true } } },
+        },
+      },
+      skip: (pagination.page - 1) * pagination.take,
+      take: pagination.take,
+      orderBy: { timestamp: 'desc' },
+    });
+    const items = productsWithOutFilter.length;
+    return {
+      products,
+      pagination: {
+        total: items,
+        pageTotal: Math.ceil(items / pagination.take),
+        take: pagination.take,
+        page: pagination.page,
+      },
+    };
   }
 }
