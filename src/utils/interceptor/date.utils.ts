@@ -66,8 +66,8 @@ export function getShiftTimings(
 
   const endDate = moment(targetDate);
   endDate.hours(endHour);
-  endDate.minutes(endMinute);
-  endDate.seconds(0);
+  endDate.minutes(endMinute - 1);
+  endDate.seconds(59);
   endDate.milliseconds(0);
 
   if (shift === 'NIGHT' && addDays > 0) {
@@ -75,4 +75,26 @@ export function getShiftTimings(
   }
 
   return { startDate: startDate.toDate(), endDate: endDate.toDate() };
+}
+
+export function getCurrentShift(currentTime: Date): SHIFT {
+  const hour = moment(currentTime).hour();
+
+  if (
+    hour >= TIME_RANGE.DAY_OT.start.hour &&
+    hour < TIME_RANGE.NIGHT_OT.start.hour
+  ) {
+    return 'DAY';
+  } else {
+    return 'NIGHT';
+  }
+}
+
+export function isDateToday(targetDate: Date) {
+  const isToday = moment(targetDate).isSame(new Date(), 'day');
+  return isToday;
+}
+
+export function isNowInTimeShiftRange(startDate: Date, endDate: Date) {
+  return moment().isBetween(startDate, endDate);
 }

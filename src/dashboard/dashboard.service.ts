@@ -1,8 +1,14 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  forwardRef,
+  Inject,
+  Injectable,
+} from '@nestjs/common';
 import { ProductionPlan, SHIFT, WORKING_TIME_TYPE } from '@prisma/client';
 import * as _ from 'lodash';
 import * as moment from 'moment';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { ProductQuery } from 'src/product/interface/product-query.interface';
 import { ProductService } from 'src/product/product.service';
 import { ProductionPlanService } from 'src/production-plan/production-plan.service';
 import { StationService } from 'src/station/station.service';
@@ -27,38 +33,8 @@ import {
 export class DashboardService {
   constructor(
     private prisma: PrismaService,
-    private productService: ProductService,
     private productionPlanService: ProductionPlanService,
   ) {}
-
-  // async getDashboardByMonth({
-  //   lineId,
-  //   month,
-  //   year,
-  // }: DashboardMonthDto): Promise<DashboardBase> {
-  //   const startDate = moment([year, month - 1])
-  //     .startOf('month')
-  //     .toDate()
-  //     .toISOString();
-  //   const endDate = moment(startDate).endOf('month').toDate().toISOString();
-  //   const date = getStartDateAndEndDate(startDate, endDate);
-  //   const baseDashboard = await this.mappingDashboard(lineId, date);
-  //   return baseDashboard;
-  // }
-
-  // async getDashboardByWeek(
-  //   dashboardWeekDto: DashboardWeekDto,
-  // ): Promise<DashboardBase> {
-  //   const date = getStartDateAndEndDate(
-  //     dashboardWeekDto.startDate,
-  //     dashboardWeekDto.endDate,
-  //   );
-  //   const baseDashboard = await this.mappingDashboard(
-  //     dashboardWeekDto.lineId,
-  //     date,
-  //   );
-  //   return baseDashboard;
-  // }
 
   async getDashboardByMonth({
     lineId,
@@ -124,22 +100,13 @@ export class DashboardService {
     let dashboardWeek = dashboardDates
       .filter((date) => date !== undefined)
       .reduce(this.mappingDateToWeek, defaultDashboard);
-    const performance =
-      dashboardWeek.target > 0
-        ? (dashboardWeek.actual * 100) / dashboardWeek.target
-        : 0;
-    const quality =
-      dashboardWeek.actual > 0
-        ? ((dashboardWeek.actual - dashboardWeek.failureTotal) * 100) /
-          dashboardWeek.actual
-        : 0;
-    const availability =
-      dashboardWeek.workingTime.min > 0
-        ? ((dashboardWeek.workingTime.min - dashboardWeek.downtimeTotal) *
-            100) /
-          dashboardWeek.workingTime.min
-        : 0;
-    const oee = (performance * availability * quality) / Math.pow(100, 2);
+    const { availability, oee, performance, quality } = this.calculatePercent({
+      actual: dashboardWeek.actual,
+      downtimeTotal: dashboardWeek.downtimeTotal,
+      failureTotal: dashboardWeek.failureTotal,
+      min: dashboardWeek.workingTime.min,
+      target: dashboardWeek.target,
+    });
 
     dashboardWeek = {
       ...dashboardWeek,
@@ -198,9 +165,9 @@ export class DashboardService {
     if (!stationBottleNeck)
       throw new BadRequestException('station bottle neck is not exist');
     let plan = 0;
-    const isToday = moment(dashboardDate.targetDate).isSame(new Date(), 'day');
-    const isFuture = moment().isBefore(dashboardDate.targetDate);
-    const isNowInTimeShiftRange = moment().isBetween(
+    const dateNow = moment().toDate();
+    const isFuture = moment(dateNow).isBefore(dashboardDate.targetDate);
+    const isNowInTimeShiftRange = moment(dateNow).isBetween(
       timeShift.startDate,
       timeShift.endDate,
     );
@@ -213,26 +180,8 @@ export class DashboardService {
       targetPlan.workingTime.type,
       true,
     );
-    if (isToday && isNowInTimeShiftRange) {
-      // let hour = TIME_RANGE.DAY_NOT_OT.start.hour;
-      // let minute = TIME_RANGE.DAY_NOT_OT.start.minute;
-      // if (dashboardDate.shift === 'NIGHT') {
-      //   switch (targetPlan.workingTime.type) {
-      //     case 'OVERTIME':
-      //       hour = 18;
-      //       minute = 0;
-      //       break;
-      //     case 'NOT_OVERTIME':
-      //       hour = 22;
-      //       minute = 0;
-      //   }
-      // }
-      // const initTime = moment(dashboardDate.targetDate)
-      //   .set('hour', hour)
-      //   .set('minute', minute);
-
-      // const testDate = moment()
-      const diffMinutes = diffTimeAsMinutes(timeShift.startDate, new Date());
+    if (isNowInTimeShiftRange) {
+      const diffMinutes = diffTimeAsMinutes(timeShift.startDate, dateNow);
       plan = Math.floor(Math.floor(diffMinutes) / stationBottleNeck.cycleTime);
       if (plan < 0) plan = 0;
     } else {
@@ -249,29 +198,6 @@ export class DashboardService {
       endAt: timeShift.endDate,
     };
   }
-
-  // isNowAfterTimeShift(start: Date, end: Date) {
-  //   return
-  // }
-
-  // getDateBetweenNightTodayAndEndNight(workingTimeType: WORKING_TIME_TYPE) {
-  //   let hour = TIME_RANGE.NIGHT_NOT_OT.start.hour;
-  //   let minute = TIME_RANGE.NIGHT_NOT_OT.start.minute;
-  //   if (workingTimeType === 'OVERTIME') {
-  //     hour = TIME_RANGE.NIGHT_OT.start.hour;
-  //     minute = TIME_RANGE.NIGHT_OT.start.minute;
-  //   }
-  //   const start = moment().set('hour', hour).set('minute', minute);
-  //   const end = moment()
-  //     .add('day', 1)
-  //     .set('hour', TIME_RANGE.NIGHT_NOT_OT.end.hour)
-  //     .set('minute', TIME_RANGE.NIGHT_NOT_OT.end.minute);
-  //   return {
-  //     startDate: start,
-  //     endDate: end,
-  //   };
-  // }
-
   async mappingWorkingTime(
     lineId: number,
     date: {
@@ -328,7 +254,7 @@ export class DashboardService {
       isDate ? shift : undefined,
     );
     const target = plans.reduce((total, plan) => plan.target + total, 0);
-    const goods = await this.productService.findAllProductBetween(
+    const goods = await this.findAllProductBetween(
       { isGoods: true, lineId: lineId },
       date.startDate,
       date.endDate,
@@ -340,14 +266,13 @@ export class DashboardService {
       shift,
       workingTimeType,
     );
-
-    const performance = target > 0 ? (actual * 100) / target : 0;
-    const quality = actual > 0 ? ((actual - failureTotal) * 100) / actual : 0;
-    const availability =
-      workingTime.min > 0
-        ? ((workingTime.min - downtimeTotal) * 100) / workingTime.min
-        : 0;
-    const oee = (performance * availability * quality) / Math.pow(100, 2);
+    const { availability, performance, oee, quality } = this.calculatePercent({
+      actual,
+      downtimeTotal,
+      failureTotal,
+      min: workingTime.min,
+      target,
+    });
     return {
       failureDefect,
       failureTotal,
@@ -360,6 +285,29 @@ export class DashboardService {
       oee: Number(oee.toFixed(2)),
       workingTime,
       actual,
+    };
+  }
+
+  async findAllProductBetween(query: ProductQuery, start: Date, end: Date) {
+    return await this.prisma.product.findMany({
+      where: {
+        timestamp: { gte: start, lte: end },
+        isGoods: query.isGoods,
+        model: { lineId: query.lineId },
+      },
+    });
+  }
+
+  calculatePercent({ target, actual, failureTotal, min, downtimeTotal }) {
+    const performance = target > 0 ? (actual * 100) / target : 0;
+    const quality = actual > 0 ? ((actual - failureTotal) * 100) / actual : 0;
+    const availability = min > 0 ? ((min - downtimeTotal) * 100) / min : 0;
+    const oee = (performance * availability * quality) / Math.pow(100, 2);
+    return {
+      performance,
+      quality,
+      availability,
+      oee,
     };
   }
 

@@ -9,8 +9,8 @@ export const TIME_RANGE = {
       minute: 30,
     },
     end: {
-      hour: 16,
-      minute: 30,
+      hour: 20,
+      minute: 0,
     },
   },
   DAY_NOT_OT: {
@@ -19,8 +19,8 @@ export const TIME_RANGE = {
       minute: 30,
     },
     end: {
-      hour: 20,
-      minute: 0,
+      hour: 16,
+      minute: 30,
     },
   },
   NIGHT_NOT_OT: {

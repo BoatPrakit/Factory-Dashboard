@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Model, Product } from '@prisma/client';
+import { AlertService } from 'src/alert/alert.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -7,7 +8,10 @@ import { ProductQuery } from './interface/product-query.interface';
 
 @Injectable()
 export class ProductService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private alertService: AlertService,
+  ) {}
 
   async create({ defect, employee, ...createProductDto }: CreateProductDto) {
     let product: Product;
@@ -58,6 +62,10 @@ export class ProductService {
         existProduct,
       );
     }
+    await this.alertService.alertWhenBelowCriteria(
+      model.lineId,
+      createProductDto.timestamp,
+    );
     return product;
   }
 
@@ -143,16 +151,6 @@ export class ProductService {
 
   async findAll() {
     return await this.prisma.product.findMany();
-  }
-
-  async findAllProductBetween(query: ProductQuery, start: Date, end: Date) {
-    return await this.prisma.product.findMany({
-      where: {
-        timestamp: { gte: start, lte: end },
-        isGoods: query.isGoods,
-        model: { lineId: query.lineId },
-      },
-    });
   }
 
   async findOne(id: number) {
