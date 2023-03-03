@@ -54,6 +54,6 @@ jobs:
          username: ${{ secrets.USERNAME }}
          key: ${{ secrets.KEY }}
          script: |
-           docker-compose down
-           docker-compose up -d
+           ls -la
+           docker-compose up -f Factory-Dashboard/docker-compose.yml -d
            docker ps -a
