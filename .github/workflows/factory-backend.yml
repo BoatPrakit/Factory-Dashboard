@@ -56,5 +56,5 @@ jobs:
          script: |
            ls -la
            docker pull ghcr.io/pungpeee/factory-dashboard:main
-           docker-compose up -f Factory-Dasboard/docker-compose.yml -d
+           docker-compose up -f Factory-Dashboard/docker-compose.yml -d
            docker ps -a
