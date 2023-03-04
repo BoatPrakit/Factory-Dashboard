@@ -54,7 +54,9 @@ jobs:
          username: ${{ secrets.USERNAME }}
          key: ${{ secrets.KEY }}
          script: |
-           docker-compose down -f Factory-Dashboard/docker-compose.yml
+           ls -la
            docker pull ghcr.io/pungpeee/factory-dashboard:main
+           docker images
+           docker-compose down -f Factory-Dashboard/docker-compose.yml
            docker-compose up -f Factory-Dashboard/docker-compose.yml -d
            docker ps -a
