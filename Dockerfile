@@ -5,7 +5,7 @@ COPY package*.json ./
 COPY prisma ./prisma/
 COPY .env ./
 RUN npm install
-RUN npx prisma generate
+RUN npx prisma db push
 
 COPY . .
 EXPOSE 4000
