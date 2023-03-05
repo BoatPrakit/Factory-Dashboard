@@ -42,18 +42,19 @@ jobs:
          source: .
          target: .
     
-#   deploy:
-#       needs: build
-#       runs-on: ubuntu-latest
-#       steps:
+  deploy:
+      needs: build
+      runs-on: ubuntu-latest
+      steps:
       
-#       - name: Deploy execute command ssh to remote server
-#         uses: appleboy/ssh-action@master
-#         with:
-#          host: ${{ secrets.HOST }}
-#          username: ${{ secrets.USERNAME }}
-#          password: ${{ secrets.PASSWORD }}
-#          script: |
-#            docker-compose -f Docker-back-end/docker-compose.yml down 
-#            docker pull ghcr.io/integratedproject-ii/back-end:main 
-#            docker-compose -f Docker-back-end/docker-compose.yml up -d 
+      - name: Deploy execute command ssh to remote server
+        uses: appleboy/ssh-action@master
+        with:
+         host: ${{ secrets.HOST }}
+         username: ${{ secrets.USERNAME }}
+         key: ${{ secrets.KEY }}
+         script: |
+           ls -la
+           docker pull ghcr.io/pungpeee/factory-dashboard:main
+           docker-compose -f Factory-Dashboard/docker-compose.yml up -d
+           docker ps -a
