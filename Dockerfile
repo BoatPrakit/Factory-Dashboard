@@ -5,9 +5,9 @@ COPY package*.json ./
 COPY prisma ./prisma/
 COPY .env ./
 RUN npm install
-RUN npx prisma db push
+RUN npx prisma generate
 
 COPY . .
-EXPOSE 4000
+EXPOSE 3000
 RUN npm run build
 CMD ["npm","run","start:prod"]
