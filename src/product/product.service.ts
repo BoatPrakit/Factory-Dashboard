@@ -181,8 +181,16 @@ export class ProductService {
         model: { lineId },
       },
       include: {
+        model: { include: { line: true } },
         productHaveFailure: {
-          include: { failure: { include: { failureDetail: true } } },
+          include: {
+            failure: {
+              include: {
+                failureDetail: true,
+                employeeShift: { include: { employee: true } },
+              },
+            },
+          },
         },
       },
       skip: (pagination.page - 1) * pagination.take,
@@ -190,8 +198,23 @@ export class ProductService {
       orderBy: { timestamp: 'desc' },
     });
     const items = productsWithOutFilter.length;
+    const responseProducts = products.map((p) => ({
+      pinStampNumber: p.serialNumber,
+      model: p.model.modelName,
+      status: p.isGoods,
+      defectType: p.productHaveFailure.length
+        ? p.productHaveFailure[0].failure.failureDetail.type
+        : '',
+      operation: p.model.line.lineName,
+      failureDetail: p.productHaveFailure.length
+        ? p.productHaveFailure[0].failure.failureDetail.details
+        : '',
+      employee: p.productHaveFailure.length
+        ? p.productHaveFailure[0].failure.employeeShift.employee.employeeName
+        : '',
+    }));
     return {
-      products,
+      products: responseProducts,
       pagination: {
         total: items,
         pageTotal: Math.ceil(items / pagination.take),

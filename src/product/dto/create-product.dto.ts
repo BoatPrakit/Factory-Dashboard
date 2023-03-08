@@ -21,6 +21,10 @@ export class CreateProductDto {
   serialNumber: string;
 
   @IsNotEmpty()
+  @IsString()
+  machineNumber: string;
+
+  @IsNotEmpty()
   @IsDateString()
   timestamp: string;
 

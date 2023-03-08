@@ -300,7 +300,7 @@ export class DashboardService {
 
   calculatePercent({ target, actual, failureTotal, min, downtimeTotal }) {
     const performance = target > 0 ? (actual * 100) / target : 0;
-    const quality = actual > 0 ? ((actual - failureTotal) * 100) / actual : 0;
+    const quality = actual > 0 ? (actual * 100) / (actual + failureTotal) : 0;
     const availability = min > 0 ? ((min - downtimeTotal) * 100) / min : 0;
     const oee = (performance * availability * quality) / Math.pow(100, 2);
     return {

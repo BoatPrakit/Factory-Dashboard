@@ -132,6 +132,7 @@ model Product {
   isGoods             Boolean                    @db.TinyInt @map("is_goods")
   modelId             Int                   @map("model_id")
   timestamp            DateTime               @db.DateTime(0)
+  machineNumber        String?                @map("machine_number")
   model                Model                  @relation(fields: [modelId], references: [modelId], onDelete: NoAction, onUpdate: NoAction, map: "fk_product_model1")
   productHaveFailure ProductHaveFailure[] 
 

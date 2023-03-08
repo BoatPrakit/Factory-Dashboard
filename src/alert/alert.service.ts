@@ -38,23 +38,18 @@ export class AlertService {
     );
     if (!criteria) return;
 
-    const { availability, quality, performance, oee } =
-      await this.dashboardService.getDashboardByDate({
-        lineId,
-        shift: currentShift,
-        targetDate: now.toISOString(),
-      });
-    const buildMessages = this.buildMessages(
-      { availability, quality, performance, oee },
-      criteria,
-    );
+    const dashboardDate = await this.dashboardService.getDashboardByDate({
+      lineId,
+      shift: currentShift,
+      targetDate: now.toISOString(),
+    });
+    const buildMessages = this.buildMessages(dashboardDate, criteria);
     await this.lineChatBotService.pushMessage(buildMessages);
   }
 
-  buildMessages(
-    { availability, quality, performance, oee },
-    { criteria, lineName },
-  ) {
+  buildMessages(dashboard, { criteria, lineName }) {
+    if (!dashboard) return;
+    const { availability, quality, performance, oee } = dashboard;
     const lowerMetrics = [];
     const metrics = [
       { name: 'Availability', value: availability },
