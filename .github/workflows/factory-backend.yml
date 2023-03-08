@@ -31,7 +31,7 @@ jobs:
         file: ./Dockerfile
         context: .
         push: true
-        tags: ghcr.io/pungpeee/factory-dashboard:main
+        tags: ghcr.io/boatprakit/factory-dashboard:main
    
     - name: Publish compose file
       uses: appleboy/ssh-action@v0.1.8
@@ -55,6 +55,6 @@ jobs:
          key: ${{ secrets.KEY }}
          script: |
            docker-compose -f Factory-Dashboard/docker-compose.yml down       
-           docker pull ghcr.io/pungpeee/factory-dashboard:main
+           docker pull ghcr.io/boatprakit/factory-dashboard:main
            docker-compose -f Factory-Dashboard/docker-compose.yml up -d
            docker ps -a
