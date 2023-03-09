@@ -29,10 +29,22 @@ export class DowntimeService {
       employee.workingTimeType,
     );
     if (!workingTime) throw new BadRequestException('working time not found');
+    const existEmployee = await this.prisma.employee.findUnique({
+      where: { employeeId: employee.employeeId },
+    });
+    if (!existEmployee)
+      throw new BadRequestException('employee data not found');
     const availabilityLose = await this.prisma.availabilityLose.findFirst({
       where: {
         availabilityId: createDowntimeDto.availabilityId,
         lineId: station.lineId,
+      },
+    });
+    const employeeShift = await this.prisma.employeeShift.findFirst({
+      where: {
+        employeeId: existEmployee.employeeId,
+        group: employee.group,
+        workingTimeId: workingTime.workingTimeId,
       },
     });
     if (!availabilityLose)
@@ -42,18 +54,22 @@ export class DowntimeService {
     const downtime = await this.prisma.downtime.create({
       data: {
         duration: Math.floor(duration),
-        timestamp: createDowntimeDto.startAt,
+        startAt: createDowntimeDto.startAt,
+        endAt: createDowntimeDto.endAt,
         station: { connect: { stationId: createDowntimeDto.stationId } },
         availabilityLose: {
           connect: { availabilityId: availabilityLose.availabilityId },
         },
         employeeShift: {
-          create: {
-            group: employee.group,
-            employee: { connect: { employeeId: employee.employeeId } },
-            workingTime: {
-              connect: { workingTimeId: workingTime.workingTimeId },
+          connectOrCreate: {
+            create: {
+              group: employee.group,
+              employee: { connect: { employeeId: employee.employeeId } },
+              workingTime: {
+                connect: { workingTimeId: workingTime.workingTimeId },
+              },
             },
+            where: { employeeShiftId: employeeShift?.employeeShiftId || -1 },
           },
         },
       },

@@ -26,7 +26,8 @@ model AvailabilityLose {
 model Downtime {
   downtimeId        Int               @id @map("dt_id") @default(autoincrement())
   duration          Int
-  timestamp         DateTime          @db.DateTime(0)
+  startAt           DateTime          @db.DateTime(0)
+  endAt             DateTime          @db.DateTime(0)
   availabilityId    String               @map("al_id")
   stationId         String            @db.VarChar(30) @map("s_id")
   employeeShiftId   Int               @map("es_id")
@@ -169,12 +170,14 @@ model ProductionPlan {
 }
 
 model ProductInputAmount {
-  productInputId  String    @id @db.VarChar(30) @map("pia_id")
+  productInputId  Int    @id @map("pia_id") @default(autoincrement())
   stationId       String    @map("s_id")
   station         Station   @relation(fields: [stationId], references: [stationId])
   date            DateTime  @default(now())
   amount          Int
   position        PRODUCT_INPUT_POSITION
+
+  @@map("product_input_amount")
 }
 
 model Station {
@@ -182,6 +185,7 @@ model Station {
   stationName String     @db.VarChar(45) @map("station_name")
   lineId      Int @map("line_id")
   cycleTime   Int @map("cycle_time")
+  sequence    Int
   productInputAmount ProductInputAmount[]
   downtime     Downtime[]
   failure      Failure[]

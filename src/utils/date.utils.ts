@@ -1,6 +1,6 @@
 import { SHIFT, WORKING_TIME_TYPE } from '@prisma/client';
 import * as moment from 'moment';
-import { TIME_RANGE } from '../time-range';
+import { TIME_RANGE } from './time-range';
 
 export function getStartDateAndEndDate(start: string, end?: string) {
   return {
@@ -97,4 +97,13 @@ export function isDateToday(targetDate: Date) {
 
 export function isNowInTimeShiftRange(startDate: Date, endDate: Date) {
   return moment().isBetween(startDate, endDate);
+}
+
+export function getStartEndDateCurrentShift(
+  workingTimeType: WORKING_TIME_TYPE = 'OVERTIME',
+) {
+  const now = new Date();
+  const currentShift = getCurrentShift(now);
+  const timeShift = getShiftTimings(currentShift, workingTimeType);
+  return timeShift;
 }

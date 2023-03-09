@@ -16,4 +16,8 @@ export class CreateStationDto {
   @IsNotEmpty()
   @IsNumber()
   lineId: number;
+
+  @IsNotEmpty()
+  @IsNumber()
+  sequence: number;
 }

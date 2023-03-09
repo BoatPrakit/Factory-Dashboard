@@ -2,9 +2,13 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { Model, Product } from '@prisma/client';
 import { AlertService } from 'src/alert/alert.service';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { getStartDateAndEndDate } from 'src/utils/interceptor/date.utils';
+import {
+  getStartDateAndEndDate,
+  getStartEndDateCurrentShift,
+} from 'src/utils/date.utils';
 import { CreateProductDto } from './dto/create-product.dto';
 import { GetProductDto } from './dto/get-product.dto';
+import { InputProductAmountDto } from './dto/input-product-amount.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductQuery } from './interface/product-query.interface';
 
@@ -149,6 +153,61 @@ export class ProductService {
       },
     });
     return product;
+  }
+
+  async inputProductAmount(payload: InputProductAmountDto) {
+    await this.checkStationPosition(payload);
+    const timeShift = getStartEndDateCurrentShift();
+    const productInputRecord = await this.prisma.productInputAmount.findFirst({
+      where: {
+        stationId: payload.stationId,
+        date: { gte: timeShift.startDate, lte: timeShift.endDate },
+      },
+    });
+    let result;
+    if (productInputRecord) {
+      result = await this.prisma.productInputAmount.update({
+        where: { productInputId: productInputRecord.productInputId },
+        data: { amount: { increment: payload.increment } },
+      });
+    } else {
+      result = await this.prisma.productInputAmount.create({
+        data: {
+          amount: payload.increment,
+          position: payload.position,
+          station: { connect: { stationId: payload.stationId } },
+          date: payload.date,
+        },
+      });
+    }
+    return result;
+  }
+
+  private async checkStationPosition(payload: InputProductAmountDto) {
+    const station = await this.prisma.station.findUnique({
+      where: { stationId: payload.stationId },
+    });
+    if (!station) {
+      throw new BadRequestException('this station id does not exist');
+    }
+    const stations = await this.prisma.station.findMany({
+      where: { lineId: station.lineId },
+      orderBy: { sequence: 'asc' },
+    });
+    if (!stations.length) throw new BadRequestException('no station available');
+    if (payload.position === 'BOTTLE_NECK') {
+      const stationBottleNeck = stations.sort(
+        (a, b) => b.cycleTime - a.cycleTime,
+      )[0];
+      if (stationBottleNeck.stationId !== station.stationId) {
+        throw new BadRequestException('this station is not bottle neck');
+      }
+    } else {
+      const firstStation = stations[0];
+      if (firstStation.stationId !== station.stationId) {
+        throw new BadRequestException('this station is not first station');
+      }
+    }
   }
 
   async findAll() {

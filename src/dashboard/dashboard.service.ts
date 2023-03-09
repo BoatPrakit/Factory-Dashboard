@@ -16,7 +16,7 @@ import {
   diffTimeAsMinutes,
   getShiftTimings,
   getStartDateAndEndDate,
-} from 'src/utils/interceptor/date.utils';
+} from 'src/utils/date.utils';
 import { TimeRangeType, TIME_RANGE } from 'src/utils/time-range';
 import { DashboardDateDto } from './dto/dashboard-date.dto';
 import { DashboardMonthDto } from './dto/dashboard-month.dto';
@@ -387,7 +387,7 @@ export class DashboardService {
     return await this.prisma.downtime.findMany({
       where: {
         station: { lineId: lineId },
-        timestamp: { gte: startDate, lte: endDate },
+        startAt: { gte: startDate, lte: endDate },
       },
       include: { availabilityLose: true },
     });

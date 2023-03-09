@@ -8,7 +8,7 @@ import {
   getShiftTimings,
   isDateToday,
   isNowInTimeShiftRange,
-} from 'src/utils/interceptor/date.utils';
+} from 'src/utils/date.utils';
 import { CRITERIA } from './criteria.constant';
 
 @Injectable()
