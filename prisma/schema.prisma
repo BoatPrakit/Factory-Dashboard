@@ -168,11 +168,21 @@ model ProductionPlan {
   @@map("production_plan")
 }
 
+model ProductInputAmount {
+  productInputId  String    @id @db.VarChar(30) @map("pia_id")
+  stationId       String    @map("s_id")
+  station         Station   @relation(fields: [stationId], references: [stationId])
+  date            DateTime  @default(now())
+  amount          Int
+  position        PRODUCT_INPUT_POSITION
+}
+
 model Station {
   stationId         String     @id @db.VarChar(30) @map("s_id")
   stationName String     @db.VarChar(45) @map("station_name")
   lineId      Int @map("line_id")
   cycleTime   Int @map("cycle_time")
+  productInputAmount ProductInputAmount[]
   downtime     Downtime[]
   failure      Failure[]
   line         Line       @relation(fields: [lineId], references: [lineId], onDelete: NoAction, onUpdate: NoAction, map: "st_line_id")
@@ -201,4 +211,9 @@ enum SHIFT {
 enum WORKING_TIME_TYPE {
   OVERTIME
   NOT_OVERTIME
+}
+
+enum PRODUCT_INPUT_POSITION {
+  BOTTLE_NECK
+  FIRST_OP
 }

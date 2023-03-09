@@ -320,19 +320,14 @@ export class DashboardService {
       startDate,
       endDate,
     );
-    const downtimeDefect = _.chain(downtimes)
-      .uniqBy((downtime) => downtime.availabilityId)
-      .map(
-        (downtime): DowntimeDefect => ({
-          details: downtime.availabilityLose.details,
-          downtime: downtimes
-            .filter((dt) => dt.availabilityId === downtime.availabilityId)
-            .reduce((total, dt) => dt.duration + total, 0),
-          id: downtime.availabilityId,
-          station: downtime.stationId,
-        }),
-      )
-      .value();
+    const downtimeDefect = downtimes.map(
+      (d): DowntimeDefect => ({
+        details: d.availabilityLose.details,
+        downtime: d.duration,
+        id: d.availabilityId,
+        station: d.stationId,
+      }),
+    );
     const downtimeTotal = downtimeDefect.reduce(
       (total, downtime) => downtime.downtime + total,
       0,
