@@ -1,0 +1,10 @@
+version: "3.3"
+services:
+  backend:
+    image: ghcr.io/pungpeee/factory-dashboard:main
+    ports: 
+      - 80:3000
+networks:
+    default:
+        external:
+            name: factory_dashboard_network
