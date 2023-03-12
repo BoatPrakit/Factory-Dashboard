@@ -34,12 +34,14 @@ import {
   AvailabilityParams,
   CalculatePercentParams,
   PerformanceParams,
+  QualityParams,
 } from './interface/calculate-percent.params';
 import {
   DashboardBase,
   DashboardDateResponse,
   DowntimeDefect,
   FailureDefect,
+  QualityResult,
   WorkingTime,
 } from './interface/dashboard.interface';
 
@@ -87,12 +89,10 @@ export class DashboardService {
       dateDto.targetDate = moment(dashboardWeekDto.startDate)
         .add(index, 'day')
         .toISOString();
-      // console.log(dateDto.targetDate);
       return this.getDashboardByDate(dateDto);
     });
 
     const dashboardDates = await Promise.all([...dashboardDatePromises]);
-    // console.log(dashboardDates.filter((d) => d !== undefined));
     const defaultDashboard: DashboardBase = {
       actual: 0,
       availabilityIssue: {
@@ -101,6 +101,12 @@ export class DashboardService {
         result: 0,
       },
       availability: 0,
+      quality: 0,
+      qualityIssue: {
+        failureDefectAmount: 0,
+        productAmountAtFirstOp: 0,
+        result: 0,
+      },
       downtimeDefect: [],
       downtimeTotal: 0,
       failureDefect: [],
@@ -120,7 +126,6 @@ export class DashboardService {
     //   'OVERTIME',
     //   new Date(dashboardWeekDto.startDate),
     // );
-
     const dashboardDatesWithOutUndefined = dashboardDates.filter(
       (date) => date !== undefined,
     );
@@ -128,15 +133,20 @@ export class DashboardService {
       this.mappingDateToWeek,
       defaultDashboard,
     );
+
     const availability = this.availabilityFormula(
       dashboardWeek.availabilityIssue.diffMins,
       dashboardWeek.availabilityIssue.downtimeBottleNeck,
+    );
+    const quality = this.qualityFormula(
+      dashboardWeek.qualityIssue.productAmountAtFirstOp,
+      dashboardWeek.qualityIssue.failureDefectAmount,
     );
 
     dashboardWeek = {
       ...dashboardWeek,
       // performance: Number(performance.toFixed(2)),
-      // quality: Number(quality.toFixed(2)),
+      quality,
       availability,
       // oee: Number(oee.toFixed(2)),
     };
@@ -159,8 +169,18 @@ export class DashboardService {
         downtimeBottleNeck:
           date.availabilityIssue.downtimeBottleNeck +
           prev.availabilityIssue.downtimeBottleNeck,
-        result: date.availabilityIssue.result + date.availabilityIssue.result,
+        result: 0,
       },
+      qualityIssue: {
+        result: 0,
+        failureDefectAmount:
+          date.qualityIssue.failureDefectAmount +
+          prev.qualityIssue.failureDefectAmount,
+        productAmountAtFirstOp:
+          date.qualityIssue.productAmountAtFirstOp +
+          prev.qualityIssue.productAmountAtFirstOp,
+      },
+      quality: 0,
       availability: 0,
       // oee: 1,
       // performance: 1,
@@ -299,12 +319,13 @@ export class DashboardService {
       shift,
       workingTimeType,
     );
-    const { availabilityIssue } = await this.calculatePercent({
+    const { availabilityIssue, qualityIssue } = await this.calculatePercent({
       actualFinishGood: actual,
       lineId,
       shift,
       timeShift: date,
       workingMin: workingTime.min,
+      failureDefect,
     });
     return {
       failureDefect,
@@ -314,6 +335,8 @@ export class DashboardService {
       target,
       availability: availabilityIssue.result,
       availabilityIssue,
+      qualityIssue,
+      quality: qualityIssue.result,
       // performance: Number(performance.toFixed(2)),
       // quality: Number(quality.toFixed(2)),
       // oee: Number(oee.toFixed(2)),
@@ -362,13 +385,48 @@ export class DashboardService {
       timeShift: params.timeShift,
       shift: params.shift,
     });
+    const qualityIssue = await this.calculateQuality({
+      failureDefect: params.failureDefect,
+      timeShift: params.timeShift,
+    });
     // const oee = (performance * availability * quality) / Math.pow(100, 2);
     return {
       // performance,
-      // quality,
+      qualityIssue,
       availabilityIssue,
       // oee,
     };
+  }
+
+  async calculateQuality(params: QualityParams): Promise<QualityResult> {
+    const productInputAtFirstOp =
+      await this.prisma.productInputAmount.findFirst({
+        where: {
+          position: 'FIRST_OP',
+          date: {
+            gte: params.timeShift.startDate,
+            lte: params.timeShift.endDate,
+          },
+        },
+      });
+    const result = productInputAtFirstOp
+      ? this.qualityFormula(
+          productInputAtFirstOp?.amount,
+          params.failureDefect.length,
+        )
+      : 0;
+    return {
+      result: result,
+      failureDefectAmount: params.failureDefect.length,
+      productAmountAtFirstOp: productInputAtFirstOp?.amount || 0,
+    };
+  }
+
+  qualityFormula(productAmountAtFirstOp: number, defectAmount: number) {
+    if (!productAmountAtFirstOp || _.isNil(defectAmount)) return 0;
+    const quality =
+      ((productAmountAtFirstOp - defectAmount) * 100) / productAmountAtFirstOp;
+    return Number(quality.toFixed(2));
   }
 
   async calculateAvailability(params: AvailabilityParams) {
@@ -411,7 +469,7 @@ export class DashboardService {
   }
 
   availabilityFormula(diff: number, sumDowntime: number) {
-    if (!diff || !sumDowntime) return 0;
+    if (_.isNil(diff) || _.isNil(sumDowntime)) return 0;
     const result = ((diff - sumDowntime) * 100) / diff;
     return Number(result.toFixed(2));
   }

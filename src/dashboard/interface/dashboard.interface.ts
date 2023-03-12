@@ -22,7 +22,8 @@ export interface DashboardBase {
   availability: number;
   availabilityIssue: AvailabilityResult;
   // performance: number;
-  // quality: number;
+  quality: number;
+  qualityIssue: QualityResult;
   target: number;
   downtimeDefect: DowntimeDefect[];
   downtimeTotal: number;
@@ -40,6 +41,11 @@ export interface DashboardDateResponse extends DashboardBase {
   endAt: Date;
 }
 
+export interface QualityResult {
+  result: number;
+  productAmountAtFirstOp: number;
+  failureDefectAmount: number;
+}
 export interface AvailabilityResult {
   result: number;
   diffMins: number;
