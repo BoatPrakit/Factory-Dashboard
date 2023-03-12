@@ -18,10 +18,11 @@ export type FailureDefect = {
 };
 
 export interface DashboardBase {
-  oee: number;
+  // oee: number;
   availability: number;
-  performance: number;
-  quality: number;
+  availabilityIssue: AvailabilityResult;
+  // performance: number;
+  // quality: number;
   target: number;
   downtimeDefect: DowntimeDefect[];
   downtimeTotal: number;
@@ -37,4 +38,10 @@ export interface DashboardDateResponse extends DashboardBase {
   group: string;
   startAt: Date;
   endAt: Date;
+}
+
+export interface AvailabilityResult {
+  result: number;
+  diffMins: number;
+  downtimeBottleNeck: number;
 }

@@ -3,6 +3,26 @@ export type TimeRangeType = {
   end: { hour: number; minute: number };
 };
 export const TIME_RANGE = {
+  NIGHT_BREAK: {
+    start: {
+      hour: 0,
+      minute: 0,
+    },
+    end: {
+      hour: 1,
+      minute: 0,
+    },
+  },
+  DAY_BREAK: {
+    start: {
+      hour: 12,
+      minute: 0,
+    },
+    end: {
+      hour: 13,
+      minute: 0,
+    },
+  },
   DAY_OT: {
     start: {
       hour: 7,

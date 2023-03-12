@@ -1,6 +1,7 @@
 import { SHIFT, WORKING_TIME_TYPE } from '@prisma/client';
 import * as moment from 'moment';
 import { TIME_RANGE } from './time-range';
+import { FullDate } from './types/date.type';
 
 export function getStartDateAndEndDate(start: string, end?: string) {
   return {
@@ -19,6 +20,14 @@ export function diffTimeAsMinutes(
   const end = moment(endDate);
   const duration = moment.duration(end.diff(start)).asMinutes();
   return duration;
+}
+
+export function setTimeByMoment(
+  date: Date | string,
+  hour: number,
+  minute: number,
+) {
+  return moment(date).set('hour', hour).set('minute', minute);
 }
 
 export function getShiftTimings(
@@ -88,6 +97,23 @@ export function getCurrentShift(currentTime: Date): SHIFT {
   } else {
     return 'NIGHT';
   }
+}
+
+export function getBreakTime(shift: SHIFT, date?: Date): FullDate {
+  const { DAY_BREAK, NIGHT_BREAK } = TIME_RANGE;
+  let startHour = DAY_BREAK.start.hour;
+  let startMinute = DAY_BREAK.start.minute;
+  let endHour = DAY_BREAK.end.hour;
+  let endMinute = DAY_BREAK.end.minute;
+  if (shift === 'NIGHT') {
+    startHour = NIGHT_BREAK.start.hour;
+    startMinute = NIGHT_BREAK.start.minute;
+    endHour = NIGHT_BREAK.end.hour;
+    endMinute = NIGHT_BREAK.end.minute;
+  }
+  const startAt = setTimeByMoment(date, startHour, startMinute).toDate();
+  const endAt = setTimeByMoment(date, endHour, endMinute).toDate();
+  return { startDate: startAt, endDate: endAt };
 }
 
 export function isDateToday(targetDate: Date) {
