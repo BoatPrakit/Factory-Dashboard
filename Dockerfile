@@ -9,4 +9,4 @@ RUN npx prisma generate
 COPY . .
 EXPOSE 3000
 RUN npm run build
-CMD npx prisma db push && npm run start:prod
+CMD npx prisma migrate deploy && npm run start:prod

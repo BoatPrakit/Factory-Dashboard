@@ -1,3 +1,5 @@
+import { Station } from '@prisma/client';
+
 export type WorkingTime = {
   time: string;
   min: number;
@@ -18,10 +20,11 @@ export type FailureDefect = {
 };
 
 export interface DashboardBase {
-  // oee: number;
+  oee: number;
   availability: number;
   availabilityIssue: AvailabilityResult;
-  // performance: number;
+  performanceIssue: PerformanceResult;
+  performance: number;
   quality: number;
   qualityIssue: QualityResult;
   target: number;
@@ -31,14 +34,18 @@ export interface DashboardBase {
   workingTime: WorkingTime;
   failureTotal: number;
   actual: number;
+  startAt: Date;
+  endAt: Date;
+}
+
+export interface DashboardInner extends DashboardBase {
+  isDowntimeOccurBeforeBreak: boolean;
 }
 
 export interface DashboardDateResponse extends DashboardBase {
   plan: number;
   bottleNeck: string;
   group: string;
-  startAt: Date;
-  endAt: Date;
 }
 
 export interface QualityResult {
@@ -50,4 +57,12 @@ export interface AvailabilityResult {
   result: number;
   diffMins: number;
   downtimeBottleNeck: number;
+}
+
+export interface PerformanceResult {
+  diffTime: number;
+  actual: number;
+  totalDowntimeBottleNeck: number;
+  result: number;
+  bottleNeckCycleTime: number;
 }

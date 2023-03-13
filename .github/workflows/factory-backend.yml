@@ -7,54 +7,53 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    
-    steps:
-    - name: Chekout code
-      uses: actions/checkout@v2
 
-      
-    - name: Login to Github registry ghcr
-      uses: docker/login-action@v1
-      with:
-         registry: ghcr.io
-         username: ${{ github.repository_owner }}
-         password: ${{ secrets.TOKEN_FACTORY_DASHBOARD }}
-         
-    - name: Create env file
-      run: |
+    steps:
+      - name: Chekout code
+        uses: actions/checkout@v2
+
+      - name: Login to Github registry ghcr
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.TOKEN_FACTORY_DASHBOARD }}
+
+      - name: Create env file
+        run: |
           touch .env
           echo DATABASE_URL=${{ secrets.DATABASE_URL }} >> .env
-         
-    - name: Build image and push Dockerfile
-      uses: docker/build-push-action@v2
-      with:
-        file: ./Dockerfile
-        context: .
-        push: true
-        tags: ghcr.io/boatprakit/factory-dashboard:main
-   
-    - name: Publish compose file
-      uses: appleboy/ssh-action@v0.1.8
-      with: 
-         host: ${{ secrets.HOST }}
-         username: ${{ secrets.USERNAME }}
-         key: ${{ secrets.KEY }}
-         source: .
-         target: .
-    
+          echo LINE_CHATBOT_TOKEN=${{ secrets.LINE_CHATBOT_TOKEN }} >> .env
+
+      - name: Build image and push Dockerfile
+        uses: docker/build-push-action@v2
+        with:
+          file: ./Dockerfile
+          context: .
+          push: true
+          tags: ghcr.io/boatprakit/factory-dashboard:main
+
+      - name: Publish compose file
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.KEY }}
+          source: docker-compose.yml
+          target: ~/Factory-Dashboard/
+
   deploy:
-      needs: build
-      runs-on: ubuntu-latest
-      steps:
-      
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
       - name: Deploy execute command ssh to remote server
         uses: appleboy/ssh-action@master
         with:
-         host: ${{ secrets.HOST }}
-         username: ${{ secrets.USERNAME }}
-         key: ${{ secrets.KEY }}
-         script: |
-           docker-compose -f Factory-Dashboard/docker-compose.yml down       
-           docker pull ghcr.io/boatprakit/factory-dashboard:main
-           docker-compose -f Factory-Dashboard/docker-compose.yml up -d
-           docker ps -a
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.KEY }}
+          script: |
+            docker-compose -f Factory-Dashboard/docker-compose.yml down       
+            docker pull ghcr.io/boatprakit/factory-dashboard:main
+            docker-compose -f Factory-Dashboard/docker-compose.yml up -d
+            docker ps -a

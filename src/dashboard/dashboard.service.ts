@@ -1,31 +1,18 @@
-import {
-  BadRequestException,
-  forwardRef,
-  Inject,
-  Injectable,
-} from '@nestjs/common';
-import {
-  ProductionPlan,
-  SHIFT,
-  Station,
-  WORKING_TIME_TYPE,
-} from '@prisma/client';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { SHIFT, WORKING_TIME_TYPE } from '@prisma/client';
 import * as _ from 'lodash';
 import * as moment from 'moment';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ProductQuery } from 'src/product/interface/product-query.interface';
-import { ProductService } from 'src/product/product.service';
 import { ProductionPlanService } from 'src/production-plan/production-plan.service';
-import { StationService } from 'src/station/station.service';
 import {
   diffTimeAsMinutes,
   getBreakTime,
   getShiftTimings,
   getStartDateAndEndDate,
-  isDateToday,
   setTimeByMoment,
 } from 'src/utils/date.utils';
-import { TimeRangeType, TIME_RANGE } from 'src/utils/time-range';
+import { TIME_RANGE } from 'src/utils/time-range';
 import { FullDate } from 'src/utils/types/date.type';
 import { DashboardDateDto } from './dto/dashboard-date.dto';
 import { DashboardMonthDto } from './dto/dashboard-month.dto';
@@ -39,8 +26,10 @@ import {
 import {
   DashboardBase,
   DashboardDateResponse,
+  DashboardInner,
   DowntimeDefect,
   FailureDefect,
+  PerformanceResult,
   QualityResult,
   WorkingTime,
 } from './interface/dashboard.interface';
@@ -111,21 +100,21 @@ export class DashboardService {
       downtimeTotal: 0,
       failureDefect: [],
       failureTotal: 0,
-      // oee: 0,
-      // performance: 0,
-      // quality: 0,
+      oee: 0,
+      performance: 0,
+      performanceIssue: {
+        actual: 0,
+        bottleNeckCycleTime: 0,
+        diffTime: 0,
+        result: 0,
+        totalDowntimeBottleNeck: 0,
+      },
       target: 0,
       workingTime: { min: 0, time: dashboardWeekDto.shift },
+      startAt: null,
+      endAt: null,
     };
     if (!dashboardDates.length) return defaultDashboard;
-    // defaultDashboard.oee = 1;
-    // defaultDashboard.performance = 1;
-    // defaultDashboard.quality = 1;
-    // const timeShift = getShiftTimings(
-    //   dashboardWeekDto.shift,
-    //   'OVERTIME',
-    //   new Date(dashboardWeekDto.startDate),
-    // );
     const dashboardDatesWithOutUndefined = dashboardDates.filter(
       (date) => date !== undefined,
     );
@@ -142,13 +131,21 @@ export class DashboardService {
       dashboardWeek.qualityIssue.productAmountAtFirstOp,
       dashboardWeek.qualityIssue.failureDefectAmount,
     );
+    const performance = this.performanceFormula({
+      actual: dashboardWeek.performanceIssue.actual,
+      cycleTime: dashboardWeek.performanceIssue.bottleNeckCycleTime,
+      diffTime: dashboardWeek.performanceIssue.diffTime,
+      totalDowntimeBottleNeck:
+        dashboardWeek.performanceIssue.totalDowntimeBottleNeck,
+    });
+    const oee = (availability * quality * performance) / Math.pow(100, 2);
 
     dashboardWeek = {
       ...dashboardWeek,
-      // performance: Number(performance.toFixed(2)),
+      performance,
       quality,
       availability,
-      // oee: Number(oee.toFixed(2)),
+      oee: Number(oee.toFixed(2)),
     };
     return dashboardWeek;
   }
@@ -157,6 +154,10 @@ export class DashboardService {
     prev: DashboardBase,
     date: DashboardDateResponse,
   ): DashboardBase {
+    if (!prev.startAt || !prev.endAt) {
+      prev.startAt = date.startAt;
+      prev.endAt = date.endAt;
+    }
     return {
       actual: date.actual + prev.actual,
       downtimeDefect: _.union(prev.downtimeDefect, date.downtimeDefect),
@@ -180,16 +181,31 @@ export class DashboardService {
           date.qualityIssue.productAmountAtFirstOp +
           prev.qualityIssue.productAmountAtFirstOp,
       },
+      performanceIssue: {
+        actual: date.performanceIssue.actual + prev.performanceIssue.actual,
+        diffTime:
+          date.performanceIssue.diffTime + prev.performanceIssue.diffTime,
+        result: 0,
+        totalDowntimeBottleNeck:
+          date.performanceIssue.totalDowntimeBottleNeck +
+          prev.performanceIssue.totalDowntimeBottleNeck,
+        bottleNeckCycleTime: date.performanceIssue.bottleNeckCycleTime,
+      },
       quality: 0,
       availability: 0,
-      // oee: 1,
-      // performance: 1,
-      // quality: (date.quality * prev.quality) / Math.pow(100, 2),
+      oee: 1,
+      performance: 1,
       target: date.target + prev.target,
       workingTime: {
         min: date.workingTime.min + prev.workingTime.min,
         time: prev.workingTime.time,
       },
+      startAt: moment(date.startAt).isBefore(moment(prev.startAt))
+        ? date.startAt
+        : prev.startAt,
+      endAt: moment(date.endAt).isAfter(moment(prev.endAt))
+        ? date.endAt
+        : prev.endAt,
     };
   }
 
@@ -224,21 +240,32 @@ export class DashboardService {
       timeShift.startDate,
       timeShift.endDate,
     );
-
+    const breakTime = getBreakTime(
+      dashboardDate.shift,
+      new Date(dashboardDate.targetDate),
+    );
+    const isNowAfterBreak = moment(dateNow).isAfter(breakTime.endDate);
     const baseDashboard = await this.mappingDashboard(
       dashboardDate.lineId,
       timeShift,
       dashboardDate.shift,
+      isNowInTimeShiftRange,
+      isNowAfterBreak,
+      dateNow,
       date,
       targetPlan.workingTime.type,
-      true,
     );
+    const diffTime = this.diffDowntimeStartAndEnd(
+      timeShift,
+      baseDashboard.isDowntimeOccurBeforeBreak,
+      isNowAfterBreak,
+    );
+    const diffMinutes =
+      diffTime - baseDashboard.availabilityIssue.downtimeBottleNeck;
+    plan = Math.floor(Math.floor(diffMinutes) / stationBottleNeck.cycleTime);
     if (isNowInTimeShiftRange) {
-      const diffMinutes = diffTimeAsMinutes(timeShift.startDate, dateNow);
-      plan = Math.floor(Math.floor(diffMinutes) / stationBottleNeck.cycleTime);
       if (plan < 0) plan = 0;
     } else {
-      plan = baseDashboard.target;
       if (isFuture) plan = 0;
     }
 
@@ -289,10 +316,12 @@ export class DashboardService {
     lineId: number,
     date: { startDate: Date; endDate: Date },
     shift: SHIFT,
+    isNowInTimeShiftRange: boolean,
+    isNowAfterBreak: boolean,
+    dateNow: Date,
     baseDate?: { startDate: Date; endDate: Date },
     workingTimeType?: WORKING_TIME_TYPE,
-    isDate?: boolean,
-  ): Promise<DashboardBase> {
+  ): Promise<DashboardInner> {
     const { failureDefect, failureTotal } = await this.mappingFailure(
       lineId,
       date,
@@ -304,7 +333,7 @@ export class DashboardService {
     const plans = await this.productionPlanService.findProductionPlansByDate(
       lineId,
       baseDate || date,
-      isDate ? shift : undefined,
+      shift,
     );
     const target = plans.reduce((total, plan) => plan.target + total, 0);
     const goods = await this.findAllProductBetween(
@@ -319,13 +348,22 @@ export class DashboardService {
       shift,
       workingTimeType,
     );
-    const { availabilityIssue, qualityIssue } = await this.calculatePercent({
+    const {
+      availabilityIssue,
+      qualityIssue,
+      oee,
+      performanceIssue,
+      isDowntimeOccurBeforeBreak,
+    } = await this.calculatePercent({
       actualFinishGood: actual,
       lineId,
       shift,
       timeShift: date,
       workingMin: workingTime.min,
       failureDefect,
+      isNowInTimeShiftRange,
+      dateNow,
+      isNowAfterBreak,
     });
     return {
       failureDefect,
@@ -337,11 +375,14 @@ export class DashboardService {
       availabilityIssue,
       qualityIssue,
       quality: qualityIssue.result,
-      // performance: Number(performance.toFixed(2)),
-      // quality: Number(quality.toFixed(2)),
-      // oee: Number(oee.toFixed(2)),
+      isDowntimeOccurBeforeBreak,
+      performance: performanceIssue.result,
+      performanceIssue,
+      oee: Number(oee.toFixed(2)),
       workingTime,
       actual,
+      startAt: date.startDate,
+      endAt: date.endDate,
     };
   }
 
@@ -377,24 +418,45 @@ export class DashboardService {
       );
       return downtimeStart.isBefore(breakStart);
     });
-    // const performance =
-    // const quality = actual > 0 ? (actual * 100) / (actual + failureTotal) : 0;
+    const isDowntimeOccurBeforeBreak = downtimesBeforeBreak.length
+      ? true
+      : false;
     const availabilityIssue = await this.calculateAvailability({
       bottleNeckDowntimes,
-      isDowntimeOccurBeforeBreak: downtimesBeforeBreak.length ? true : false,
+      isDowntimeOccurBeforeBreak,
       timeShift: params.timeShift,
       shift: params.shift,
+      dateNow: params.dateNow,
+      isNowInTimeShiftRange: params.isNowInTimeShiftRange,
+      isNowAfterBreak: params.isNowAfterBreak,
     });
     const qualityIssue = await this.calculateQuality({
       failureDefect: params.failureDefect,
       timeShift: params.timeShift,
     });
-    // const oee = (performance * availability * quality) / Math.pow(100, 2);
+    const performanceIssue = await this.calculatePerformance({
+      actualFinishGood: params.actualFinishGood,
+      bottleNeckDowntimes: bottleNeckDowntimes,
+      isDowntimeOccurBeforeBreak,
+      downtimes: downtimes,
+      isNowInTimeShiftRange: params.isNowInTimeShiftRange,
+      shift: params.shift,
+      stationBottleNeck: stationBottleNeck,
+      timeShift: params.timeShift,
+      totalDowntimeBottleNeck: availabilityIssue.downtimeBottleNeck,
+      dateNow: params.dateNow,
+      isNowAfterBreak: params.isNowAfterBreak,
+    });
+    const performance = performanceIssue?.result || 0;
+    const quality = qualityIssue.result;
+    const availability = availabilityIssue.result;
+    const oee = (performance * availability * quality) / Math.pow(100, 2);
     return {
-      // performance,
+      performanceIssue,
       qualityIssue,
       availabilityIssue,
-      // oee,
+      oee,
+      isDowntimeOccurBeforeBreak,
     };
   }
 
@@ -435,17 +497,11 @@ export class DashboardService {
       0,
     );
 
-    const dateNow = moment().toDate();
-    const isNowInTimeShiftRange = moment(dateNow).isBetween(
-      params.timeShift.startDate,
-      params.timeShift.endDate,
-    );
-    // const breakTime = getBreakTime(params.shift, params.timeShift.startDate);
     let issueDate: FullDate;
-    if (isNowInTimeShiftRange) {
+    if (params.isNowInTimeShiftRange) {
       issueDate = {
         startDate: params.timeShift.startDate,
-        endDate: dateNow,
+        endDate: params.dateNow,
       };
     } else {
       issueDate = {
@@ -456,6 +512,7 @@ export class DashboardService {
     const diffMinuteBetweenStartAndIssueDate = this.diffDowntimeStartAndEnd(
       issueDate,
       params.isDowntimeOccurBeforeBreak,
+      params.isNowAfterBreak,
     );
     const availability = this.availabilityFormula(
       diffMinuteBetweenStartAndIssueDate,
@@ -474,58 +531,80 @@ export class DashboardService {
     return Number(result.toFixed(2));
   }
 
-  // async calculatePerformance(params: PerformanceParams) {
-  //   let performance: number;
-  //   const stationAfterBottleNeck = await this.prisma.station.findMany({
-  //     where: { sequence: { gt: params.stationBottleNeck.sequence } },
-  //   });
-  //   const stationThatDowntimeAfterBottleNeck = _.chain(params.downtimes)
-  //     .intersectionWith(
-  //       stationAfterBottleNeck,
-  //       (a, b) => a.stationId === b.stationId,
-  //     )
-  //     .value();
+  async calculatePerformance(
+    params: PerformanceParams,
+  ): Promise<PerformanceResult> {
+    const productInputOfBottleNeck =
+      await this.prisma.productInputAmount.findFirst({
+        where: {
+          position: 'BOTTLE_NECK',
+          date: {
+            gte: params.timeShift.startDate,
+            lte: params.timeShift.endDate,
+          },
+        },
+      });
 
-  //   const actualOfBottleNeck = await this.prisma.productInputAmount.findFirst({
-  //     where: {
-  //       position: 'BOTTLE_NECK',
-  //       date: { gte: params.date.startDate, lte: params.date.endDate },
-  //     },
-  //   });
-  //   if (!actualOfBottleNeck)
-  //     throw new BadRequestException('actual of bottle neck station is empty');
+    const stationAfterBottleNeck = await this.prisma.station.findMany({
+      where: { sequence: { gt: params.stationBottleNeck.sequence } },
+    });
+    const stationThatDowntimeAfterBottleNeck = _.chain(params.downtimes)
+      .intersectionWith(
+        stationAfterBottleNeck,
+        (a, b) => a.stationId === b.stationId,
+      )
+      .value();
+    if (params.isNowInTimeShiftRange) {
+      params.timeShift.endDate = params.dateNow;
+    }
+    const diffTime = this.diffDowntimeStartAndEnd(
+      params.timeShift,
+      params.isDowntimeOccurBeforeBreak,
+      params.isNowAfterBreak,
+    );
+    let actual: number;
+    if (
+      (stationThatDowntimeAfterBottleNeck.length &&
+        !params.bottleNeckDowntimes.length) ||
+      !params.isNowInTimeShiftRange
+    ) {
+      // If sequence after bottle neck station has any downtime
+      actual = params.actualFinishGood;
+    } else {
+      // If no downtime on any station
+      // If bottle neck & after bottle neck has any downtime
+      // If bottle neck station has any downtime
+      actual = productInputOfBottleNeck?.amount || 0;
+    }
+    const performance = this.performanceFormula({
+      actual,
+      cycleTime: params.stationBottleNeck.cycleTime,
+      diffTime: diffTime,
+      totalDowntimeBottleNeck: params.totalDowntimeBottleNeck,
+    });
+    return {
+      diffTime,
+      actual: actual,
+      totalDowntimeBottleNeck: params.totalDowntimeBottleNeck,
+      result: performance,
+      bottleNeckCycleTime: params.stationBottleNeck.cycleTime,
+    };
+  }
 
-  //   if (!params.downtimes.length) {
-  //     // If no downtime on any station
-  //     performance = actualOfBottleNeck.amount / params.workingMin;
-  //   } else if (stationAfterBottleNeck.length) {
-  //     // If sequence after bottle neck station has any downtime
-  //     // .map((d) => d.stationId)
-  //     // .intersection(stationAfterBottleNeck.map((s) => s.stationId))
-  //     if (stationThatDowntimeAfterBottleNeck.length) {
-  //       performance = params.actualFinishGood / params.workingMin;
-  //     }
-  //   } else if (
-  //     params.bottleNeckDowntimes.length &&
-  //     stationThatDowntimeAfterBottleNeck.length
-  //   ) {
-  //   } else if (params.bottleNeckDowntimes.length) {
-  //     // If bottle neck station has any downtime
-  //     const sumDowntime = params.bottleNeckDowntimes.reduce(
-  //       (prev, bd) => bd.duration + prev,
-  //       0,
-  //     );
-  //     performance =
-  //       actualOfBottleNeck.amount / (params.workingMin - sumDowntime);
-  //   }
-  //   return performance;
-  // }
+  performanceFormula({ actual, cycleTime, diffTime, totalDowntimeBottleNeck }) {
+    const actualOfBottleNeckPlan =
+      (diffTime - totalDowntimeBottleNeck) / cycleTime;
+
+    const performance = (actual * 100) / actualOfBottleNeckPlan;
+    return Number(performance.toFixed(2));
+  }
 
   diffDowntimeStartAndEnd(
     { startDate, endDate }: FullDate,
     isDowntimeOccurBeforeBreak: boolean,
+    isNowAfterBreak: boolean,
   ) {
-    if (isDowntimeOccurBeforeBreak) {
+    if (isDowntimeOccurBeforeBreak && isNowAfterBreak) {
       return Math.floor(diffTimeAsMinutes(startDate, endDate) - 60);
     } else return Math.floor(diffTimeAsMinutes(startDate, endDate));
   }
