@@ -142,10 +142,10 @@ export class DashboardService {
 
     dashboardWeek = {
       ...dashboardWeek,
-      performance,
-      quality,
-      availability,
-      oee: Number(oee.toFixed(2)),
+      performance: performance || 0,
+      quality: quality || 0,
+      availability: availability || 0,
+      oee: Number(oee.toFixed(2)) || 0,
     };
     return dashboardWeek;
   }
