@@ -7,6 +7,7 @@ import {
   getStartEndDateCurrentShift,
 } from 'src/utils/date.utils';
 import { CreateProductDto } from './dto/create-product.dto';
+import { GetProductInputDto } from './dto/get-product-input.dto';
 import { GetProductDto } from './dto/get-product.dto';
 import { InputProductAmountDto } from './dto/input-product-amount.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -155,9 +156,19 @@ export class ProductService {
     return product;
   }
 
+  async getProductInput(payload: GetProductInputDto) {
+    const timeShift = getStartEndDateCurrentShift(new Date(payload.date));
+    return await this.prisma.productInputAmount.findFirst({
+      where: {
+        position: payload.position,
+        date: { gte: timeShift.startDate, lte: timeShift.endDate },
+      },
+    });
+  }
+
   async inputProductAmount(payload: InputProductAmountDto) {
     await this.checkStationPosition(payload);
-    const timeShift = getStartEndDateCurrentShift();
+    const timeShift = getStartEndDateCurrentShift(new Date(payload.date));
     const productInputRecord = await this.prisma.productInputAmount.findFirst({
       where: {
         stationId: payload.stationId,
@@ -196,8 +207,8 @@ export class ProductService {
     });
     if (!stations.length) throw new BadRequestException('no station available');
     if (payload.position === 'BOTTLE_NECK') {
-      const stationBottleNeck = stations.sort(
-        (a, b) => b.cycleTime - a.cycleTime,
+      const stationBottleNeck = stations.sort((a, b) =>
+        b.cycleTime.minus(a.cycleTime).toNumber(),
       )[0];
       if (stationBottleNeck.stationId !== station.stationId) {
         throw new BadRequestException('this station is not bottle neck');

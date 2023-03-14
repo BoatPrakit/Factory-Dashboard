@@ -12,6 +12,7 @@ export interface CalculatePercentParams {
   isNowInTimeShiftRange: boolean;
   dateNow: Date;
   isNowAfterBreak: boolean;
+  isFuture: boolean;
 }
 
 export interface QualityParams {
@@ -30,6 +31,7 @@ export interface PerformanceParams {
   actualFinishGood: number;
   isNowInTimeShiftRange: boolean;
   isNowAfterBreak: boolean;
+  isFuture: boolean;
 }
 
 export interface AvailabilityParams {
@@ -40,4 +42,5 @@ export interface AvailabilityParams {
   bottleNeckDowntimes: Downtime[];
   timeShift: FullDate;
   isNowAfterBreak: boolean;
+  isFuture: boolean;
 }

@@ -25,7 +25,7 @@ model AvailabilityLose {
 
 model Downtime {
   downtimeId        Int               @id @map("dt_id") @default(autoincrement())
-  duration          Int
+  duration          Decimal
   startAt           DateTime          @db.DateTime(0)
   endAt             DateTime          @db.DateTime(0)
   availabilityId    String               @map("al_id")
@@ -184,7 +184,7 @@ model Station {
   stationId         String     @id @db.VarChar(30) @map("s_id")
   stationName String     @db.VarChar(45) @map("station_name")
   lineId      Int @map("line_id")
-  cycleTime   Int @map("cycle_time")
+  cycleTime   Decimal @map("cycle_time")
   sequence    Int
   productInputAmount ProductInputAmount[]
   downtime     Downtime[]

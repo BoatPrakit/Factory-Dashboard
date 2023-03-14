@@ -53,7 +53,7 @@ export class DowntimeService {
       );
     const downtime = await this.prisma.downtime.create({
       data: {
-        duration: Math.floor(duration),
+        duration: Number(duration.toFixed(2)),
         startAt: createDowntimeDto.startAt,
         endAt: createDowntimeDto.endAt,
         station: { connect: { stationId: createDowntimeDto.stationId } },

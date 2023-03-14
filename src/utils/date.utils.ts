@@ -126,10 +126,11 @@ export function isNowInTimeShiftRange(startDate: Date, endDate: Date) {
 }
 
 export function getStartEndDateCurrentShift(
+  targetDate: Date,
   workingTimeType: WORKING_TIME_TYPE = 'OVERTIME',
 ) {
-  const now = new Date();
+  const now = new Date(targetDate);
   const currentShift = getCurrentShift(now);
-  const timeShift = getShiftTimings(currentShift, workingTimeType);
+  const timeShift = getShiftTimings(currentShift, workingTimeType, now);
   return timeShift;
 }

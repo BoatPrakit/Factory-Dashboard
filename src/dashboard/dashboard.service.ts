@@ -234,8 +234,9 @@ export class DashboardService {
     if (!stationBottleNeck)
       throw new BadRequestException('station bottle neck is not exist');
     let plan = 0;
+    // const dateNow = moment().set('h', 17).set('m', 0).toDate();
     const dateNow = moment().toDate();
-    const isFuture = moment(dateNow).isBefore(dashboardDate.targetDate);
+    const isFuture = moment(dateNow).isBefore(timeShift.startDate);
     const isNowInTimeShiftRange = moment(dateNow).isBetween(
       timeShift.startDate,
       timeShift.endDate,
@@ -251,6 +252,7 @@ export class DashboardService {
       dashboardDate.shift,
       isNowInTimeShiftRange,
       isNowAfterBreak,
+      isFuture,
       dateNow,
       date,
       targetPlan.workingTime.type,
@@ -259,10 +261,13 @@ export class DashboardService {
       timeShift,
       baseDashboard.isDowntimeOccurBeforeBreak,
       isNowAfterBreak,
+      isFuture,
     );
     const diffMinutes =
       diffTime - baseDashboard.availabilityIssue.downtimeBottleNeck;
-    plan = Math.floor(Math.floor(diffMinutes) / stationBottleNeck.cycleTime);
+    plan = Math.floor(
+      Math.floor(diffMinutes) / stationBottleNeck.cycleTime.toNumber(),
+    );
     if (isNowInTimeShiftRange) {
       if (plan < 0) plan = 0;
     } else {
@@ -318,6 +323,7 @@ export class DashboardService {
     shift: SHIFT,
     isNowInTimeShiftRange: boolean,
     isNowAfterBreak: boolean,
+    isFuture: boolean,
     dateNow: Date,
     baseDate?: { startDate: Date; endDate: Date },
     workingTimeType?: WORKING_TIME_TYPE,
@@ -364,6 +370,7 @@ export class DashboardService {
       isNowInTimeShiftRange,
       dateNow,
       isNowAfterBreak,
+      isFuture,
     });
     return {
       failureDefect,
@@ -429,6 +436,7 @@ export class DashboardService {
       dateNow: params.dateNow,
       isNowInTimeShiftRange: params.isNowInTimeShiftRange,
       isNowAfterBreak: params.isNowAfterBreak,
+      isFuture: params.isFuture,
     });
     const qualityIssue = await this.calculateQuality({
       failureDefect: params.failureDefect,
@@ -446,6 +454,7 @@ export class DashboardService {
       totalDowntimeBottleNeck: availabilityIssue.downtimeBottleNeck,
       dateNow: params.dateNow,
       isNowAfterBreak: params.isNowAfterBreak,
+      isFuture: params.isFuture,
     });
     const performance = performanceIssue?.result || 0;
     const quality = qualityIssue.result;
@@ -488,12 +497,12 @@ export class DashboardService {
     if (!productAmountAtFirstOp || _.isNil(defectAmount)) return 0;
     const quality =
       ((productAmountAtFirstOp - defectAmount) * 100) / productAmountAtFirstOp;
-    return Number(quality.toFixed(2));
+    return Number(quality.toFixed(2)) || 0;
   }
 
   async calculateAvailability(params: AvailabilityParams) {
     const sumDowntimeBottleNeck = params.bottleNeckDowntimes.reduce(
-      (prev, bd) => bd.duration + prev,
+      (prev, bd) => bd.duration.toNumber() + prev,
       0,
     );
 
@@ -513,6 +522,7 @@ export class DashboardService {
       issueDate,
       params.isDowntimeOccurBeforeBreak,
       params.isNowAfterBreak,
+      params.isFuture,
     );
     const availability = this.availabilityFormula(
       diffMinuteBetweenStartAndIssueDate,
@@ -528,7 +538,7 @@ export class DashboardService {
   availabilityFormula(diff: number, sumDowntime: number) {
     if (_.isNil(diff) || _.isNil(sumDowntime)) return 0;
     const result = ((diff - sumDowntime) * 100) / diff;
-    return Number(result.toFixed(2));
+    return Number(result.toFixed(2)) || 0;
   }
 
   async calculatePerformance(
@@ -561,6 +571,7 @@ export class DashboardService {
       params.timeShift,
       params.isDowntimeOccurBeforeBreak,
       params.isNowAfterBreak,
+      params.isFuture,
     );
     let actual: number;
     if (
@@ -587,26 +598,29 @@ export class DashboardService {
       actual: actual,
       totalDowntimeBottleNeck: params.totalDowntimeBottleNeck,
       result: performance,
-      bottleNeckCycleTime: params.stationBottleNeck.cycleTime,
+      bottleNeckCycleTime: params.stationBottleNeck.cycleTime.toNumber(),
     };
   }
 
   performanceFormula({ actual, cycleTime, diffTime, totalDowntimeBottleNeck }) {
-    const actualOfBottleNeckPlan =
-      (diffTime - totalDowntimeBottleNeck) / cycleTime;
+    const actualOfBottleNeckPlan = Math.floor(
+      (diffTime - totalDowntimeBottleNeck) / cycleTime,
+    );
 
     const performance = (actual * 100) / actualOfBottleNeckPlan;
-    return Number(performance.toFixed(2));
+    return Number(performance.toFixed(2)) || 0;
   }
 
   diffDowntimeStartAndEnd(
     { startDate, endDate }: FullDate,
     isDowntimeOccurBeforeBreak: boolean,
     isNowAfterBreak: boolean,
+    isFuture: boolean,
   ) {
+    if (isFuture) return 0;
     if (isDowntimeOccurBeforeBreak && isNowAfterBreak) {
       return Math.floor(diffTimeAsMinutes(startDate, endDate) - 60);
-    } else return Math.floor(diffTimeAsMinutes(startDate, endDate));
+    } else return Math.floor(diffTimeAsMinutes(startDate, endDate) - 60);
   }
 
   async mappingDowntime(
@@ -621,7 +635,7 @@ export class DashboardService {
     const downtimeDefect = downtimes.map(
       (d): DowntimeDefect => ({
         details: d.availabilityLose.details,
-        downtime: d.duration,
+        downtime: d.duration.toNumber(),
         id: d.availabilityId,
         station: d.stationId,
       }),
