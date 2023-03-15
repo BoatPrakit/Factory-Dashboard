@@ -16,9 +16,11 @@ import { AvaiabilityLoseModule } from './availability-lose/availability-lose.mod
 import { AuthModule } from './auth/auth.module';
 import { LineChatbotModule } from './line-chatbot/line-chatbot.module';
 import { AlertModule } from './alert/alert.module';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
     LineModule,
     PrismaModule,
     ModelModule,

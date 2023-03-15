@@ -2,9 +2,19 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ResponseTransform } from './utils/interceptor/response-transform.interceptor';
+import * as fs from 'fs';
+import * as path from 'path';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  let httpsOptions;
+  if (process.env.NODE_ENV && process.env.NODE_ENV !== 'production') {
+    console.log(process.env.NODE_ENV);
+    httpsOptions = {
+      cert: fs.readFileSync(path.resolve(__dirname, '/ssl/certificate.pem')),
+      key: fs.readFileSync(path.resolve(__dirname, '/ssl/privatekey.pem')),
+    };
+  }
+  const app = await NestFactory.create(AppModule, { httpsOptions });
   app.useGlobalInterceptors(new ResponseTransform());
   app.useGlobalPipes(
     new ValidationPipe({
