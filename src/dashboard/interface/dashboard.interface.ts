@@ -20,6 +20,7 @@ export type FailureDefect = {
 };
 
 export interface DashboardBase {
+  bottleNeck: string;
   oee: number;
   availability: number;
   availabilityIssue: AvailabilityResult;
@@ -44,13 +45,12 @@ export interface DashboardInner extends DashboardBase {
 
 export interface DashboardDateResponse extends DashboardBase {
   plan: number;
-  bottleNeck: string;
   group: string;
 }
 
 export interface QualityResult {
   result: number;
-  productAmountAtFirstOp: number;
+  actualFinishGood: number;
   failureDefectAmount: number;
 }
 export interface AvailabilityResult {

@@ -93,7 +93,7 @@ export class DashboardService {
       quality: 0,
       qualityIssue: {
         failureDefectAmount: 0,
-        productAmountAtFirstOp: 0,
+        actualFinishGood: 0,
         result: 0,
       },
       downtimeDefect: [],
@@ -113,6 +113,7 @@ export class DashboardService {
       workingTime: { min: 0, time: dashboardWeekDto.shift },
       startAt: null,
       endAt: null,
+      bottleNeck: '',
     };
     if (!dashboardDates.length) return defaultDashboard;
     const dashboardDatesWithOutUndefined = dashboardDates.filter(
@@ -128,7 +129,7 @@ export class DashboardService {
       dashboardWeek.availabilityIssue.downtimeBottleNeck,
     );
     const quality = this.qualityFormula(
-      dashboardWeek.qualityIssue.productAmountAtFirstOp,
+      dashboardWeek.qualityIssue.actualFinishGood,
       dashboardWeek.qualityIssue.failureDefectAmount,
     );
     const performance = this.performanceFormula({
@@ -177,9 +178,9 @@ export class DashboardService {
         failureDefectAmount:
           date.qualityIssue.failureDefectAmount +
           prev.qualityIssue.failureDefectAmount,
-        productAmountAtFirstOp:
-          date.qualityIssue.productAmountAtFirstOp +
-          prev.qualityIssue.productAmountAtFirstOp,
+        actualFinishGood:
+          date.qualityIssue.actualFinishGood +
+          prev.qualityIssue.actualFinishGood,
       },
       performanceIssue: {
         actual: date.performanceIssue.actual + prev.performanceIssue.actual,
@@ -206,6 +207,7 @@ export class DashboardService {
       endAt: moment(date.endAt).isAfter(moment(prev.endAt))
         ? date.endAt
         : prev.endAt,
+      bottleNeck: date.bottleNeck,
     };
   }
 
@@ -360,6 +362,7 @@ export class DashboardService {
       oee,
       performanceIssue,
       isDowntimeOccurBeforeBreak,
+      stationBottleNeck,
     } = await this.calculatePercent({
       actualFinishGood: actual,
       lineId,
@@ -390,6 +393,7 @@ export class DashboardService {
       actual,
       startAt: date.startDate,
       endAt: date.endDate,
+      bottleNeck: stationBottleNeck.stationId,
     };
   }
 
@@ -439,7 +443,8 @@ export class DashboardService {
       isFuture: params.isFuture,
     });
     const qualityIssue = await this.calculateQuality({
-      failureDefect: params.failureDefect,
+      actualFinishGood: params.actualFinishGood,
+      totalFailure: params.failureDefect.length,
       timeShift: params.timeShift,
     });
     const performanceIssue = await this.calculatePerformance({
@@ -455,6 +460,7 @@ export class DashboardService {
       dateNow: params.dateNow,
       isNowAfterBreak: params.isNowAfterBreak,
       isFuture: params.isFuture,
+      totalFailure: params.failureDefect.length,
     });
     const performance = performanceIssue?.result || 0;
     const quality = qualityIssue.result;
@@ -466,37 +472,26 @@ export class DashboardService {
       availabilityIssue,
       oee,
       isDowntimeOccurBeforeBreak,
+      stationBottleNeck,
     };
   }
 
   async calculateQuality(params: QualityParams): Promise<QualityResult> {
-    const productInputAtFirstOp =
-      await this.prisma.productInputAmount.findFirst({
-        where: {
-          position: 'FIRST_OP',
-          date: {
-            gte: params.timeShift.startDate,
-            lte: params.timeShift.endDate,
-          },
-        },
-      });
-    const result = productInputAtFirstOp
-      ? this.qualityFormula(
-          productInputAtFirstOp?.amount,
-          params.failureDefect.length,
-        )
-      : 0;
+    const result = this.qualityFormula(
+      params.actualFinishGood,
+      params.totalFailure,
+    );
     return {
       result: result,
-      failureDefectAmount: params.failureDefect.length,
-      productAmountAtFirstOp: productInputAtFirstOp?.amount || 0,
+      failureDefectAmount: params.totalFailure,
+      actualFinishGood: params.actualFinishGood,
     };
   }
 
-  qualityFormula(productAmountAtFirstOp: number, defectAmount: number) {
-    if (!productAmountAtFirstOp || _.isNil(defectAmount)) return 0;
+  qualityFormula(actualFinishGood: number, defectAmount: number) {
+    if (!actualFinishGood || _.isNil(defectAmount)) return 0;
     const quality =
-      ((productAmountAtFirstOp - defectAmount) * 100) / productAmountAtFirstOp;
+      (actualFinishGood * 100) / (actualFinishGood + defectAmount);
     return Number(quality.toFixed(2)) || 0;
   }
 
@@ -576,11 +571,12 @@ export class DashboardService {
     let actual: number;
     if (
       (stationThatDowntimeAfterBottleNeck.length &&
-        !params.bottleNeckDowntimes.length) ||
+        params.bottleNeckDowntimes.length) ||
+      stationThatDowntimeAfterBottleNeck.length ||
       !params.isNowInTimeShiftRange
     ) {
       // If sequence after bottle neck station has any downtime
-      actual = params.actualFinishGood;
+      actual = params.actualFinishGood + params.totalFailure;
     } else {
       // If no downtime on any station
       // If bottle neck & after bottle neck has any downtime

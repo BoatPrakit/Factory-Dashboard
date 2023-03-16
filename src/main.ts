@@ -6,10 +6,13 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 async function bootstrap() {
-  const httpsOptions = {
-    cert: fs.readFileSync(path.resolve(__dirname, '/ssl/certificate.pem')),
-    key: fs.readFileSync(path.resolve(__dirname, '/ssl/privatekey.pem')),
-  };
+  let httpsOptions;
+  if (process.env.NODE_ENV === 'production') {
+    httpsOptions = {
+      cert: fs.readFileSync(path.resolve(__dirname, '/ssl/certificate.pem')),
+      key: fs.readFileSync(path.resolve(__dirname, '/ssl/privatekey.pem')),
+    };
+  }
   const app = await NestFactory.create(AppModule, { httpsOptions });
   app.useGlobalInterceptors(new ResponseTransform());
   app.useGlobalPipes(

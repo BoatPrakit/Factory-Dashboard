@@ -16,7 +16,8 @@ export interface CalculatePercentParams {
 }
 
 export interface QualityParams {
-  failureDefect: FailureDefect[];
+  actualFinishGood: number;
+  totalFailure: number;
   timeShift: FullDate;
 }
 export interface PerformanceParams {
@@ -28,6 +29,7 @@ export interface PerformanceParams {
   bottleNeckDowntimes: Downtime[];
   stationBottleNeck: Station;
   timeShift: FullDate;
+  totalFailure: number;
   actualFinishGood: number;
   isNowInTimeShiftRange: boolean;
   isNowAfterBreak: boolean;
