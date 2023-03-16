@@ -37,6 +37,7 @@ export interface DashboardBase {
   actual: number;
   startAt: Date;
   endAt: Date;
+  plan: number;
 }
 
 export interface DashboardInner extends DashboardBase {
@@ -44,7 +45,6 @@ export interface DashboardInner extends DashboardBase {
 }
 
 export interface DashboardDateResponse extends DashboardBase {
-  plan: number;
   group: string;
 }
 

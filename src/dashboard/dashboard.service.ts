@@ -114,6 +114,7 @@ export class DashboardService {
       startAt: null,
       endAt: null,
       bottleNeck: '',
+      plan: 0,
     };
     if (!dashboardDates.length) return defaultDashboard;
     const dashboardDatesWithOutUndefined = dashboardDates.filter(
@@ -208,6 +209,7 @@ export class DashboardService {
         ? date.endAt
         : prev.endAt,
       bottleNeck: date.bottleNeck,
+      plan: date.plan + prev.plan,
     };
   }
 
@@ -235,7 +237,6 @@ export class DashboardService {
     });
     if (!stationBottleNeck)
       throw new BadRequestException('station bottle neck is not exist');
-    let plan = 0;
     // const dateNow = moment().set('h', 17).set('m', 0).toDate();
     const dateNow = moment().toDate();
     const isFuture = moment(dateNow).isBefore(timeShift.startDate);
@@ -259,27 +260,10 @@ export class DashboardService {
       date,
       targetPlan.workingTime.type,
     );
-    const diffTime = this.diffDowntimeStartAndEnd(
-      timeShift,
-      baseDashboard.isDowntimeOccurBeforeBreak,
-      isNowAfterBreak,
-      isFuture,
-    );
-    const diffMinutes =
-      diffTime - baseDashboard.availabilityIssue.downtimeBottleNeck;
-    plan = Math.floor(
-      Math.floor(diffMinutes) / stationBottleNeck.cycleTime.toNumber(),
-    );
-    if (isNowInTimeShiftRange) {
-      if (plan < 0) plan = 0;
-    } else {
-      if (isFuture) plan = 0;
-    }
 
     return {
       ...baseDashboard,
       bottleNeck: stationBottleNeck?.stationId || '',
-      plan,
       group: targetPlan.group,
       startAt: timeShift.startDate,
       endAt: timeShift.endDate,
@@ -375,6 +359,24 @@ export class DashboardService {
       isNowAfterBreak,
       isFuture,
     });
+
+    const diffTime = this.diffDowntimeStartAndEnd(
+      date,
+      isDowntimeOccurBeforeBreak,
+      isNowAfterBreak,
+      isFuture,
+    );
+    let plan;
+    const diffMinutes = diffTime - availabilityIssue.downtimeBottleNeck;
+    plan = Math.floor(
+      Math.floor(diffMinutes) / stationBottleNeck.cycleTime.toNumber(),
+    );
+    if (isNowInTimeShiftRange) {
+      if (plan < 0) plan = 0;
+    } else {
+      if (isFuture) plan = 0;
+    }
+
     return {
       failureDefect,
       failureTotal,
@@ -394,6 +396,7 @@ export class DashboardService {
       startAt: date.startDate,
       endAt: date.endDate,
       bottleNeck: stationBottleNeck.stationId,
+      plan,
     };
   }
 
