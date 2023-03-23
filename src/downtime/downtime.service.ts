@@ -5,6 +5,7 @@ import { EmployeeService } from 'src/employee/employee.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { WorkingTimeService } from 'src/working-time/working-time.service';
 import { CreateDowntimeDto } from './dto/create-downtime.dto';
+import { CreatePaintDowntimeDto } from './dto/create-paint-downtime.dto';
 import { UpdateDowntimeDto } from './dto/update-downtime.dto';
 
 @Injectable()
@@ -15,7 +16,13 @@ export class DowntimeService {
     private alertService: AlertService,
   ) {}
 
-  async create({ employee, ...createDowntimeDto }: CreateDowntimeDto) {
+  async create(createDowntimeDto: CreateDowntimeDto | CreatePaintDowntimeDto) {
+    if (
+      createDowntimeDto instanceof CreatePaintDowntimeDto &&
+      !createDowntimeDto.extendedAvailabilityId
+    ) {
+      throw new BadRequestException('extendedAvailabilityId is not empty');
+    }
     const start = moment(createDowntimeDto.startAt);
     const end = moment(createDowntimeDto.endAt);
     const station = await this.prisma.station.findUnique({
@@ -25,12 +32,12 @@ export class DowntimeService {
     const duration = moment.duration(end.diff(start)).asMinutes();
     const workingTime = await this.workingTimeService.findOneByShift(
       station.lineId,
-      employee.shift,
-      employee.workingTimeType,
+      createDowntimeDto.employee.shift,
+      createDowntimeDto.employee.workingTimeType,
     );
     if (!workingTime) throw new BadRequestException('working time not found');
     const existEmployee = await this.prisma.employee.findUnique({
-      where: { employeeId: employee.employeeId },
+      where: { employeeId: createDowntimeDto.employee.employeeId },
     });
     if (!existEmployee)
       throw new BadRequestException('employee data not found');
@@ -43,7 +50,7 @@ export class DowntimeService {
     const employeeShift = await this.prisma.employeeShift.findFirst({
       where: {
         employeeId: existEmployee.employeeId,
-        group: employee.group,
+        group: createDowntimeDto.employee.group,
         workingTimeId: workingTime.workingTimeId,
       },
     });
@@ -51,6 +58,17 @@ export class DowntimeService {
       throw new BadRequestException(
         'availability id not found or this availability exist in another station',
       );
+
+    const extendedCause = (createDowntimeDto as CreatePaintDowntimeDto)
+      .extendedAvailabilityId
+      ? {
+          connect: {
+            extendedAvailabilityId: (
+              createDowntimeDto as CreatePaintDowntimeDto
+            ).extendedAvailabilityId,
+          },
+        }
+      : undefined;
     const downtime = await this.prisma.downtime.create({
       data: {
         duration: Number(duration.toFixed(2)),
@@ -60,11 +78,14 @@ export class DowntimeService {
         availabilityLose: {
           connect: { availabilityId: availabilityLose.availabilityId },
         },
+        extendedCause,
         employeeShift: {
           connectOrCreate: {
             create: {
-              group: employee.group,
-              employee: { connect: { employeeId: employee.employeeId } },
+              group: createDowntimeDto.employee.group,
+              employee: {
+                connect: { employeeId: createDowntimeDto.employee.employeeId },
+              },
               workingTime: {
                 connect: { workingTimeId: workingTime.workingTimeId },
               },
