@@ -272,7 +272,10 @@ export class ProductService {
   }
 
   async getProductInput(payload: GetProductInputDto) {
-    const timeShift = getStartEndDateCurrentShift(new Date(payload.date));
+    const timeShift = getStartEndDateCurrentShift(
+      new Date(payload.date),
+      false,
+    );
     return await this.prisma.productInputAmount.findFirst({
       where: {
         position: payload.position,
@@ -283,7 +286,10 @@ export class ProductService {
 
   async inputProductAmount(payload: InputProductAmountDto) {
     await this.checkStationPosition(payload);
-    const timeShift = getStartEndDateCurrentShift(new Date(payload.date));
+    const timeShift = getStartEndDateCurrentShift(
+      new Date(payload.date),
+      false,
+    );
     const productInputRecord = await this.prisma.productInputAmount.findFirst({
       where: {
         stationId: payload.stationId,

@@ -33,6 +33,7 @@ export function setTimeByMoment(
 export function getShiftTimings(
   shift: SHIFT,
   workingTime: WORKING_TIME_TYPE,
+  isPaint: boolean,
   targetDate?: Date,
 ) {
   let startHour: number;
@@ -53,17 +54,39 @@ export function getShiftTimings(
       endHour = DAY_NOT_OT.end.hour;
       endMinute = DAY_NOT_OT.end.minute;
     }
+
+    if (isPaint) {
+      startHour = DAY_NOT_OT.paint.start.hour;
+      startMinute = DAY_NOT_OT.paint.start.minute;
+      if (workingTime === 'OVERTIME') {
+        endHour = DAY_OT.paint.end.hour;
+        endMinute = DAY_OT.paint.end.minute;
+      } else {
+        endHour = DAY_NOT_OT.paint.end.hour;
+        endMinute = DAY_NOT_OT.paint.end.minute;
+      }
+    }
   } else {
     endHour = NIGHT_NOT_OT.end.hour;
     endMinute = NIGHT_NOT_OT.end.minute;
+    addDays = 1;
     if (workingTime === 'OVERTIME') {
       startHour = NIGHT_OT.start.hour;
       startMinute = NIGHT_OT.start.minute;
-      addDays = 1;
     } else {
       startHour = NIGHT_NOT_OT.start.hour;
       startMinute = NIGHT_NOT_OT.start.minute;
-      addDays = 1;
+    }
+    if (isPaint) {
+      endHour = NIGHT_NOT_OT.paint.end.hour;
+      endMinute = NIGHT_NOT_OT.paint.end.minute;
+      if (workingTime === 'OVERTIME') {
+        startHour = NIGHT_OT.paint.start.hour;
+        startMinute = NIGHT_OT.paint.start.minute;
+      } else {
+        startHour = NIGHT_NOT_OT.paint.start.hour;
+        startMinute = NIGHT_NOT_OT.paint.start.minute;
+      }
     }
   }
 
@@ -99,39 +122,42 @@ export function getCurrentShift(currentTime: Date): SHIFT {
   }
 }
 
-export function getBreakTime(
+export function getBreakTimeMinutes(
   shift: SHIFT,
   isPaint: boolean,
+  dateNow: Date,
   date?: Date,
-): FullDate {
+): number {
   const { DAY_BREAK, NIGHT_BREAK } = TIME_RANGE;
-  let startHour = DAY_BREAK.normal.start.hour;
-  let startMinute = DAY_BREAK.normal.start.minute;
-  let endHour = DAY_BREAK.normal.end.hour;
-  let endMinute = DAY_BREAK.normal.end.minute;
-  if (isPaint) {
-    if (shift === 'NIGHT') {
-      startHour = NIGHT_BREAK.paint.start.hour;
-      startMinute = NIGHT_BREAK.paint.start.minute;
-      endHour = NIGHT_BREAK.paint.end.hour;
-      endMinute = NIGHT_BREAK.paint.end.minute;
-    } else {
-      startHour = DAY_BREAK.paint.start.hour;
-      startMinute = DAY_BREAK.paint.start.minute;
-      endHour = DAY_BREAK.paint.end.hour;
-      endMinute = DAY_BREAK.paint.end.minute;
-    }
+  let issueArray: any[] = DAY_BREAK.normal;
+  let isNight = false;
+  if (shift === 'DAY') {
+    if (isPaint) issueArray = DAY_BREAK.paint;
   } else {
-    if (shift === 'NIGHT') {
-      startHour = NIGHT_BREAK.normal.start.hour;
-      startMinute = NIGHT_BREAK.normal.start.minute;
-      endHour = NIGHT_BREAK.normal.end.hour;
-      endMinute = NIGHT_BREAK.normal.end.minute;
-    }
+    isNight = true;
+    issueArray = NIGHT_BREAK.normal;
+    if (isPaint) issueArray = NIGHT_BREAK.paint;
   }
-  const startAt = setTimeByMoment(date, startHour, startMinute).toDate();
-  const endAt = setTimeByMoment(date, endHour, endMinute).toDate();
-  return { startDate: startAt, endDate: endAt };
+  const breakTimeMinutes = issueArray.reduce(
+    calculateBreakTime(isNight, date, dateNow),
+    0,
+  );
+  return breakTimeMinutes;
+}
+
+function calculateBreakTime(isNight: boolean, date: Date, dateNow: Date) {
+  return (total, p) => {
+    const startAt = setTimeByMoment(date, p.start.hour, p.start.minute);
+    if (moment(dateNow).isBefore(startAt)) return total;
+    const endAt = setTimeByMoment(date, p.end.hour, p.end.minute);
+    if (isNight) endAt.add(1, 'day');
+    const isNowInBreakTime = moment(dateNow).isBetween(startAt, endAt);
+    const diffTime = moment(isNowInBreakTime ? dateNow : endAt).diff(
+      startAt,
+      'minutes',
+    );
+    return total + Math.floor(diffTime);
+  };
 }
 
 export function isDateToday(targetDate: Date) {
@@ -145,10 +171,16 @@ export function isNowInTimeShiftRange(startDate: Date, endDate: Date) {
 
 export function getStartEndDateCurrentShift(
   targetDate: Date,
+  isPaint: boolean,
   workingTimeType: WORKING_TIME_TYPE = 'OVERTIME',
 ) {
   const now = new Date(targetDate);
   const currentShift = getCurrentShift(now);
-  const timeShift = getShiftTimings(currentShift, workingTimeType, now);
+  const timeShift = getShiftTimings(
+    currentShift,
+    workingTimeType,
+    isPaint,
+    now,
+  );
   return timeShift;
 }

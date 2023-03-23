@@ -20,9 +20,13 @@ export class AlertService {
   ) {}
 
   async alertWhenBelowCriteria(lineId: number, targetDate: string) {
+    const line = await this.prisma.line.findUnique({
+      where: { lineId },
+    });
+    const isPaint = line.lineName.toLowerCase().includes('paint');
     const now = new Date(targetDate);
     const currentShift = getCurrentShift(now);
-    const timeShift = getShiftTimings(currentShift, 'OVERTIME');
+    const timeShift = getShiftTimings(currentShift, 'OVERTIME', isPaint);
     const isNowInTimeShift = isNowInTimeShiftRange(
       timeShift.startDate,
       timeShift.endDate,

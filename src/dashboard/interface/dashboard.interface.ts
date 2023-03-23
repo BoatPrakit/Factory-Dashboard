@@ -40,10 +40,6 @@ export interface DashboardBase {
   plan: number;
 }
 
-export interface DashboardInner extends DashboardBase {
-  isDowntimeOccurBeforeBreak: boolean;
-}
-
 export interface DashboardDateResponse extends DashboardBase {
   group: string;
 }

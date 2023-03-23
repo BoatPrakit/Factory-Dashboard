@@ -11,8 +11,9 @@ export interface CalculatePercentParams {
   failureDefect: FailureDefect[];
   isNowInTimeShiftRange: boolean;
   dateNow: Date;
-  isNowAfterBreak: boolean;
+  // isNowAfterBreak: boolean;
   isFuture: boolean;
+  isPaint: boolean;
 }
 
 export interface QualityParams {
@@ -23,7 +24,7 @@ export interface QualityParams {
 export interface PerformanceParams {
   shift: SHIFT;
   dateNow: Date;
-  isDowntimeOccurBeforeBreak: boolean;
+  // isDowntimeOccurBeforeBreak: boolean;
   downtimes: Downtime[];
   totalDowntimeBottleNeck: number;
   bottleNeckDowntimes: Downtime[];
@@ -32,17 +33,20 @@ export interface PerformanceParams {
   totalFailure: number;
   actualFinishGood: number;
   isNowInTimeShiftRange: boolean;
-  isNowAfterBreak: boolean;
+  // isNowAfterBreak: boolean;
   isFuture: boolean;
+  isPaint: boolean;
 }
 
 export interface AvailabilityParams {
+  isPaint: boolean;
+  downtimes: Downtime[];
   dateNow: Date;
   shift: SHIFT;
   isNowInTimeShiftRange: boolean;
-  isDowntimeOccurBeforeBreak: boolean;
+  // isDowntimeOccurBeforeBreak: boolean;
   bottleNeckDowntimes: Downtime[];
   timeShift: FullDate;
-  isNowAfterBreak: boolean;
+  // isNowAfterBreak: boolean;
   isFuture: boolean;
 }
