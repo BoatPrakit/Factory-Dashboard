@@ -99,17 +99,35 @@ export function getCurrentShift(currentTime: Date): SHIFT {
   }
 }
 
-export function getBreakTime(shift: SHIFT, date?: Date): FullDate {
+export function getBreakTime(
+  shift: SHIFT,
+  isPaint: boolean,
+  date?: Date,
+): FullDate {
   const { DAY_BREAK, NIGHT_BREAK } = TIME_RANGE;
-  let startHour = DAY_BREAK.start.hour;
-  let startMinute = DAY_BREAK.start.minute;
-  let endHour = DAY_BREAK.end.hour;
-  let endMinute = DAY_BREAK.end.minute;
-  if (shift === 'NIGHT') {
-    startHour = NIGHT_BREAK.start.hour;
-    startMinute = NIGHT_BREAK.start.minute;
-    endHour = NIGHT_BREAK.end.hour;
-    endMinute = NIGHT_BREAK.end.minute;
+  let startHour = DAY_BREAK.normal.start.hour;
+  let startMinute = DAY_BREAK.normal.start.minute;
+  let endHour = DAY_BREAK.normal.end.hour;
+  let endMinute = DAY_BREAK.normal.end.minute;
+  if (isPaint) {
+    if (shift === 'NIGHT') {
+      startHour = NIGHT_BREAK.paint.start.hour;
+      startMinute = NIGHT_BREAK.paint.start.minute;
+      endHour = NIGHT_BREAK.paint.end.hour;
+      endMinute = NIGHT_BREAK.paint.end.minute;
+    } else {
+      startHour = DAY_BREAK.paint.start.hour;
+      startMinute = DAY_BREAK.paint.start.minute;
+      endHour = DAY_BREAK.paint.end.hour;
+      endMinute = DAY_BREAK.paint.end.minute;
+    }
+  } else {
+    if (shift === 'NIGHT') {
+      startHour = NIGHT_BREAK.normal.start.hour;
+      startMinute = NIGHT_BREAK.normal.start.minute;
+      endHour = NIGHT_BREAK.normal.end.hour;
+      endMinute = NIGHT_BREAK.normal.end.minute;
+    }
   }
   const startAt = setTimeByMoment(date, startHour, startMinute).toDate();
   const endAt = setTimeByMoment(date, endHour, endMinute).toDate();

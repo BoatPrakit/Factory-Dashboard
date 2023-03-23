@@ -23,14 +23,26 @@ model AvailabilityLose {
   @@map("availability_lose")
 }
 
+model ExtendedCauseAvailability {
+  extendedAvailabilityId   Int @id @default(autoincrement()) @map("eca_id")
+  digit        String
+  details      String
+  lineId       Int          @map("line_id")
+  line         Line         @relation(fields: [extendedAvailabilityId], references: [lineId])
+  downtime     Downtime[]
+  @@map("extended_cause_availability")
+}
+
 model Downtime {
   downtimeId        Int               @id @map("dt_id") @default(autoincrement())
   duration          Decimal
-  startAt           DateTime          @db.DateTime(0)
-  endAt             DateTime          @db.DateTime(0)
+  startAt           DateTime          @db.DateTime(0) 
+  endAt             DateTime          @db.DateTime(0)   
   availabilityId    String               @map("al_id")
+  extendedAvailabilityId  Int?        @map("extended_availability_id")
   stationId         String            @db.VarChar(30) @map("s_id")
   employeeShiftId   Int               @map("es_id")
+  extendedCause    ExtendedCauseAvailability? @relation(fields: [extendedAvailabilityId], references: [extendedAvailabilityId])
   availabilityLose AvailabilityLose  @relation(fields: [availabilityId], references: [availabilityId], onDelete: NoAction, onUpdate: NoAction, map: "dt_dtd_id")
   employeeShift    EmployeeShift    @relation(fields: [employeeShiftId], references: [employeeShiftId], onDelete: NoAction, onUpdate: NoAction, map: "dt_es_id")
   station           Station           @relation(fields: [stationId], references: [stationId], onDelete: NoAction, onUpdate: NoAction, map: "dt_s_id")
@@ -69,6 +81,8 @@ model Failure {
   employeeShiftId                Int            @map("es_id")
   failureDetailId                Int          @map("fd_id")
   position     String?             @db.VarChar(45)
+  extendedFailureId       String?             @map("extended_failure_id")
+  extendedFailureDetail   ExtendedFailureDetail? @relation(fields: [extendedFailureId], references: [extendedFailureId])
   employeeShift       EmployeeShift          @relation(fields: [employeeShiftId], references: [employeeShiftId], onDelete: NoAction, onUpdate: NoAction, map: "es_id") 
   failureDetail       FailureDetail          @relation(fields: [failureDetailId], references: [failureDetailId], onDelete: NoAction, onUpdate: NoAction, map: "fk_failure_failure_detail1")
   station             Station                @relation(fields: [stationId], references: [stationId], onDelete: NoAction, onUpdate: NoAction, map: "s_id")
@@ -91,6 +105,15 @@ model FailureDetail {
   @@map("failure_detail")
 }
 
+model ExtendedFailureDetail {
+  extendedFailureId   String       @id @map("extended_failure_id")
+  details     String
+  lineId      Int
+  line        Line    @relation(fields: [lineId], references: [lineId])
+  failure     Failure[]
+  @@map("extended_failure_detail")
+}
+
 model Line {
   lineId         Int               @id @map("line_id") @default(autoincrement())
   lineName       String            @db.VarChar(45) @map("line_name")
@@ -100,6 +123,9 @@ model Line {
   station         Station[]
   failureDetail   FailureDetail[]
   downtime        AvailabilityLose[]
+  product         Product[]
+  extendedAvailability     ExtendedCauseAvailability[]
+  extendedFailureDetail    ExtendedFailureDetail[]
   @@map("line")
 }
 
@@ -133,6 +159,10 @@ model Product {
   isGoods             Boolean                    @db.TinyInt @map("is_goods")
   modelId             Int                   @map("model_id")
   timestamp            DateTime               @db.DateTime(0)
+  isPaintFinish        Boolean                 @map("is_paint") @default(false)
+  paintAt              DateTime?              @map("paint_at")
+  paintLineId          Int?                   @map("paint_line_id")
+  paintLine            Line?                   @relation(fields: [paintLineId], references: [lineId])
   machineNumber        String?                @map("machine_number")
   model                Model                  @relation(fields: [modelId], references: [modelId], onDelete: NoAction, onUpdate: NoAction, map: "fk_product_model1")
   productHaveFailure ProductHaveFailure[] 
@@ -199,6 +229,10 @@ enum FAILURE_DETAIL_TYPE {
   SCRAP
   REPAIR
   REWORK
+  RT
+  RP
+  RW
+  PS
   Q_GATE @map("Q-GATE")
 }
 

@@ -10,6 +10,7 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { GetProductInputDto } from './dto/get-product-input.dto';
 import { GetProductDto } from './dto/get-product.dto';
 import { InputProductAmountDto } from './dto/input-product-amount.dto';
+import { UpdateProductPaintDto } from './dto/update-product-paint.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductQuery } from './interface/product-query.interface';
 
@@ -154,6 +155,120 @@ export class ProductService {
       },
     });
     return product;
+  }
+
+  async updateProductOfPaint({
+    defect,
+    employee,
+    ...payload
+  }: UpdateProductPaintDto) {
+    const existProduct = await this.prisma.product.findFirst({
+      where: { serialNumber: payload.serialNumber },
+    });
+    if (!existProduct) {
+      throw new BadRequestException('pin stamp number not found');
+    }
+    if (!existProduct.isGoods)
+      throw new BadRequestException('this product not finish from fabricator');
+
+    if (existProduct.isPaintFinish) {
+      throw new BadRequestException('this product has been finished');
+    }
+
+    if (!defect) {
+      // if paint finish good
+      return await this.prisma.product.update({
+        where: { serialNumber: payload.serialNumber },
+        data: {
+          isPaintFinish: true,
+          paintLine: {
+            connect: { lineId: payload.lineId },
+          },
+          paintAt: payload.paintAt,
+        },
+      });
+    }
+    if (!employee) throw new BadRequestException('need employee information');
+
+    const workingTime = await this.prisma.workingTime.findFirst({
+      where: {
+        lineId: payload.lineId,
+        shift: employee.shift,
+        type: employee.workingTimeType,
+      },
+    });
+    if (!workingTime) throw new BadRequestException('working time not found');
+    const existEmployee = await this.prisma.employee.findUnique({
+      where: { employeeId: employee.employeeId },
+    });
+    if (!existEmployee)
+      throw new BadRequestException('employee data not found');
+    const employeeShift = await this.prisma.employeeShift.findFirst({
+      where: {
+        employeeId: existEmployee.employeeId,
+        group: employee.group,
+        workingTimeId: workingTime.workingTimeId,
+      },
+    });
+    const failureDetail = await this.prisma.failureDetail.findFirst({
+      where: {
+        failureDetailId: defect.failureDetailId,
+        lineId: payload.lineId,
+      },
+    });
+    if (!failureDetail)
+      throw new BadRequestException(
+        'failure detail id is invalid, maybe it not exist in this fabricator line',
+      );
+    const station = await this.prisma.station.findFirst({
+      where: { stationId: defect.stationId, lineId: payload.lineId },
+    });
+    if (!station)
+      throw new BadRequestException(
+        'station id is invalid, maybe it not exist in this fabricator line',
+      );
+    const failure = await this.prisma.failure.create({
+      data: {
+        extendedFailureDetail: {
+          connect: { extendedFailureId: defect.defectTypeId },
+        },
+        failureDetail: {
+          connect: { failureDetailId: defect.failureDetailId },
+        },
+        station: {
+          connect: { stationId: defect.stationId },
+        },
+        employeeShift: {
+          connectOrCreate: {
+            create: {
+              group: employee.group,
+              employee: { connect: { employeeId: employee.employeeId } },
+              workingTime: {
+                connect: { workingTimeId: workingTime.workingTimeId },
+              },
+            },
+            where: { employeeShiftId: employeeShift.employeeShiftId },
+          },
+        },
+      },
+    });
+    const paintProduct = await this.prisma.product.update({
+      data: {
+        isPaintFinish: false,
+        paintAt: payload.paintAt,
+        paintLine: { connect: { lineId: payload.lineId } },
+      },
+      where: { serialNumber: payload.serialNumber },
+    });
+
+    await this.prisma.productHaveFailure.create({
+      data: {
+        failure: { connect: { failureId: failure.failureId } },
+        product: { connect: { productId: paintProduct.productId } },
+        timestamp: payload.paintAt,
+      },
+    });
+    return paintProduct;
   }
 
   async getProductInput(payload: GetProductInputDto) {

@@ -1,7 +1,8 @@
-import { Controller, Post, Body, Param } from '@nestjs/common';
+import { Controller, Post, Body, Param, Get } from '@nestjs/common';
 import { FailureDetailService } from './failure-detail.service';
 import { CreateFailureDetailDto } from './dto/create-failure-detail.dto';
 import { FindAllDetailsDto } from './dto/find-all-details.dto';
+import { CreateExtendedFailureDto } from './dto/create-extended-failure.dto';
 
 @Controller('failure-detail')
 export class FailureDetailController {
@@ -10,6 +11,18 @@ export class FailureDetailController {
   @Post()
   async create(@Body() createFailureDetailDto: CreateFailureDetailDto) {
     return await this.failureDetailService.create(createFailureDetailDto);
+  }
+
+  @Post('extended')
+  async createExtendedFailure(@Body() payload: CreateExtendedFailureDto) {
+    return await this.failureDetailService.createExtendedFailure(payload);
+  }
+
+  @Get('extended/:lineId')
+  async findAllExtendedFailure(@Param('lineId') lineId: string) {
+    return await this.failureDetailService.findAllExtendedFailureByLineId(
+      +lineId,
+    );
   }
 
   @Post('/:lineId')

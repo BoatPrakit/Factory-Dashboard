@@ -4,6 +4,7 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { GetProductDto } from './dto/get-product.dto';
 import { InputProductAmountDto } from './dto/input-product-amount.dto';
 import { GetProductInputDto } from './dto/get-product-input.dto';
+import { UpdateProductPaintDto } from './dto/update-product-paint.dto';
 
 @Controller('product')
 export class ProductController {
@@ -13,6 +14,11 @@ export class ProductController {
   async create(@Body() createProductDto: CreateProductDto) {
     const product = await this.productService.create(createProductDto);
     return product;
+  }
+
+  @Post('paint')
+  async updatePaintProduct(@Body() payload: UpdateProductPaintDto) {
+    return await this.productService.updateProductOfPaint(payload);
   }
 
   @Post('all/filter')

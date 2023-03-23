@@ -246,6 +246,7 @@ export class DashboardService {
     );
     const breakTime = getBreakTime(
       dashboardDate.shift,
+      false,
       new Date(dashboardDate.targetDate),
     );
     const isNowAfterBreak = moment(dateNow).isAfter(breakTime.endDate);
@@ -425,12 +426,8 @@ export class DashboardService {
     );
     const downtimesBeforeBreak = bottleNeckDowntimes.filter((b) => {
       const downtimeStart = moment(b.startAt);
-      const breakStart = setTimeByMoment(
-        b.startAt,
-        TIME_RANGE.DAY_BREAK.start.hour,
-        TIME_RANGE.DAY_BREAK.start.minute,
-      );
-      return downtimeStart.isBefore(breakStart);
+      const breakStart = getBreakTime(params.shift, false, params.dateNow);
+      return downtimeStart.isBefore(breakStart.startDate);
     });
     const isDowntimeOccurBeforeBreak = downtimesBeforeBreak.length
       ? true

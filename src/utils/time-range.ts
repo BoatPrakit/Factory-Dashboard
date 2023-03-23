@@ -4,23 +4,47 @@ export type TimeRangeType = {
 };
 export const TIME_RANGE = {
   NIGHT_BREAK: {
-    start: {
-      hour: 0,
-      minute: 0,
+    paint: {
+      start: {
+        hour: 2,
+        minute: 40,
+      },
+      end: {
+        hour: 3,
+        minute: 20,
+      },
     },
-    end: {
-      hour: 1,
-      minute: 0,
+    normal: {
+      start: {
+        hour: 0,
+        minute: 0,
+      },
+      end: {
+        hour: 1,
+        minute: 0,
+      },
     },
   },
   DAY_BREAK: {
-    start: {
-      hour: 12,
-      minute: 0,
+    paint: {
+      start: {
+        hour: 11,
+        minute: 40,
+      },
+      end: {
+        hour: 12,
+        minute: 20,
+      },
     },
-    end: {
-      hour: 13,
-      minute: 0,
+    normal: {
+      start: {
+        hour: 12,
+        minute: 0,
+      },
+      end: {
+        hour: 13,
+        minute: 0,
+      },
     },
   },
   DAY_OT: {
