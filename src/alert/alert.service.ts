@@ -26,12 +26,14 @@ export class AlertService {
     const isPaint = line.lineName.toLowerCase().includes('paint');
     const now = new Date(targetDate);
     const currentShift = getCurrentShift(now);
+    console.log(currentShift);
     const timeShift = getShiftTimings(currentShift, 'OVERTIME', isPaint);
     const isNowInTimeShift = isNowInTimeShiftRange(
       timeShift.startDate,
       timeShift.endDate,
     );
-
+    console.log(timeShift);
+    console.log(isNowInTimeShift);
     if (!isNowInTimeShift) return;
     const { lineName } = await this.prisma.line.findUnique({
       where: { lineId },

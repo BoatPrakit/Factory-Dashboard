@@ -177,7 +177,7 @@ export class ProductService {
 
     if (!defect) {
       // if paint finish good
-      return await this.prisma.product.update({
+      const product = await this.prisma.product.update({
         where: { serialNumber: payload.serialNumber },
         data: {
           isPaintFinish: true,
@@ -187,6 +187,11 @@ export class ProductService {
           paintAt: payload.paintAt,
         },
       });
+      await this.alertService.alertWhenBelowCriteria(
+        payload.lineId,
+        payload.paintAt,
+      );
+      return product;
     }
     if (!employee) throw new BadRequestException('need employee information');
 
@@ -268,6 +273,10 @@ export class ProductService {
         timestamp: payload.paintAt,
       },
     });
+    await this.alertService.alertWhenBelowCriteria(
+      payload.lineId,
+      payload.paintAt,
+    );
     return paintProduct;
   }
 

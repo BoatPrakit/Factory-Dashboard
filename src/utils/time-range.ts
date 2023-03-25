@@ -31,13 +31,14 @@ export const TIME_RANGE = {
     normal: [
       {
         start: {
-          hour: 0,
+          hour: 3,
           minute: 0,
         },
         end: {
-          hour: 1,
-          minute: 0,
+          hour: 3,
+          minute: 40,
         },
+        addDays: 1,
       },
     ],
   },

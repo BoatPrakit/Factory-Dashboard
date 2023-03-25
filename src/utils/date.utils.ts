@@ -41,6 +41,7 @@ export function getShiftTimings(
   let endHour: number;
   let endMinute: number;
   let addDays = 0;
+  let reduceDays = 0;
   const { DAY_NOT_OT, DAY_OT, NIGHT_NOT_OT, NIGHT_OT } = TIME_RANGE;
 
   if (shift === 'DAY') {
@@ -69,7 +70,17 @@ export function getShiftTimings(
   } else {
     endHour = NIGHT_NOT_OT.end.hour;
     endMinute = NIGHT_NOT_OT.end.minute;
-    addDays = 1;
+    const now = moment();
+    const dayShiftStart = moment(now).set('hour', 7).set('minute', 30);
+    const midnight = moment(now).set('hour', 0).set('minute', 0);
+    // console.log('mid', midnight);
+    // console.log('dayStart', dayShiftStart);
+    // console.log(now.toDate());
+    if (now.isBetween(midnight, dayShiftStart)) {
+      // console.log('is between');
+      addDays = 1;
+      reduceDays = 1;
+    }
     if (workingTime === 'OVERTIME') {
       startHour = NIGHT_OT.start.hour;
       startMinute = NIGHT_OT.start.minute;
@@ -91,6 +102,7 @@ export function getShiftTimings(
   }
 
   const startDate = moment(targetDate);
+  // console.log('startDate', startDate);
   startDate.hours(startHour);
   startDate.minutes(startMinute);
   startDate.seconds(0);
@@ -104,6 +116,10 @@ export function getShiftTimings(
 
   if (shift === 'NIGHT' && addDays > 0) {
     endDate.add(addDays, 'day');
+  }
+
+  if (shift === 'NIGHT' && reduceDays > 0) {
+    startDate.subtract(reduceDays, 'day');
   }
 
   return { startDate: startDate.toDate(), endDate: endDate.toDate() };
