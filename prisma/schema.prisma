@@ -28,7 +28,7 @@ model ExtendedCauseAvailability {
   digit        String
   details      String
   lineId       Int          @map("line_id")
-  line         Line         @relation(fields: [extendedAvailabilityId], references: [lineId])
+  line         Line         @relation(fields: [lineId], references: [lineId])
   downtime     Downtime[]
   @@map("extended_cause_availability")
 }
