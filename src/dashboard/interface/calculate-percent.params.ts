@@ -1,6 +1,25 @@
-import { Downtime, SHIFT, Station } from '@prisma/client';
+import {
+  Downtime,
+  ExtendedFailureDetail,
+  Failure,
+  FailureDetail,
+  Product,
+  ProductHaveFailure,
+  SHIFT,
+  Station,
+  WORKING_TIME_TYPE,
+} from '@prisma/client';
 import { FullDate } from 'src/utils/types/date.type';
 import { FailureDefect } from './dashboard.interface';
+
+export type FullFailure = ProductHaveFailure & {
+  product: Product;
+  failure: Failure & {
+    station: Station;
+    failureDetail: FailureDetail;
+    extendedFailureDetail: ExtendedFailureDetail;
+  };
+};
 
 export interface CalculatePercentParams {
   lineId: number;
@@ -8,9 +27,10 @@ export interface CalculatePercentParams {
   actualFinishGood: number;
   timeShift: FullDate;
   shift: SHIFT;
-  failureDefect: FailureDefect[];
+  failureDefect: FullFailure[];
   isNowInTimeShiftRange: boolean;
   dateNow: Date;
+  workingTimeType: WORKING_TIME_TYPE;
   // isNowAfterBreak: boolean;
   isFuture: boolean;
   isPaint: boolean;
@@ -25,6 +45,7 @@ export interface PerformanceParams {
   shift: SHIFT;
   dateNow: Date;
   // isDowntimeOccurBeforeBreak: boolean;
+  workingTimeType: WORKING_TIME_TYPE;
   downtimes: Downtime[];
   totalDowntimeBottleNeck: number;
   bottleNeckDowntimes: Downtime[];
@@ -36,6 +57,7 @@ export interface PerformanceParams {
   // isNowAfterBreak: boolean;
   isFuture: boolean;
   isPaint: boolean;
+  failureDefect: FullFailure[];
 }
 
 export interface AvailabilityParams {
@@ -49,4 +71,5 @@ export interface AvailabilityParams {
   timeShift: FullDate;
   // isNowAfterBreak: boolean;
   isFuture: boolean;
+  workingTimeType: WORKING_TIME_TYPE;
 }

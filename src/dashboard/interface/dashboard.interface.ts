@@ -40,8 +40,12 @@ export interface DashboardBase {
   plan: number;
 }
 
+export interface DashboardInner extends DashboardBase {
+  isPaint: boolean;
+}
 export interface DashboardDateResponse extends DashboardBase {
   group: string;
+  isPaint: boolean;
 }
 
 export interface QualityResult {

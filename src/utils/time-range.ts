@@ -14,6 +14,7 @@ export const TIME_RANGE = {
           hour: 10,
           minute: 30,
         },
+        addDays: 0,
       },
       {
         start: {
@@ -24,6 +25,7 @@ export const TIME_RANGE = {
           hour: 3,
           minute: 20,
         },
+        addDays: 1,
       },
     ],
     normal: [
@@ -50,6 +52,7 @@ export const TIME_RANGE = {
           hour: 12,
           minute: 20,
         },
+        addDays: 0,
       },
       {
         start: {
@@ -60,7 +63,48 @@ export const TIME_RANGE = {
           hour: 17,
           minute: 0,
         },
+        addDays: 0,
       },
+      // {
+      //   start: {
+      //     hour: 9,
+      //     minute: 39,
+      //   },
+      //   end: {
+      //     hour: 10,
+      //     minute: 50,
+      //   },
+      // },
+      // {
+      //   start: {
+      //     hour: 12,
+      //     minute: 20,
+      //   },
+      //   end: {
+      //     hour: 13,
+      //     minute: 43,
+      //   },
+      // },
+      // {
+      //   start: {
+      //     hour: 14,
+      //     minute: 46,
+      //   },
+      //   end: {
+      //     hour: 15,
+      //     minute: 39,
+      //   },
+      // },
+      // {
+      //   start: {
+      //     hour: 16,
+      //     minute: 19,
+      //   },
+      //   end: {
+      //     hour: ,
+      //     minute: 39,
+      //   },
+      // },
     ],
     normal: [
       {
@@ -146,7 +190,7 @@ export const TIME_RANGE = {
     },
     paint: {
       start: {
-        hour: 8,
+        hour: 20,
         minute: 35,
       },
       end: {

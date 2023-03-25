@@ -23,12 +23,14 @@ import { DashboardWeekDto } from './dto/dashboard-week.dto';
 import {
   AvailabilityParams,
   CalculatePercentParams,
+  FullFailure,
   PerformanceParams,
   QualityParams,
 } from './interface/calculate-percent.params';
 import {
   DashboardBase,
   DashboardDateResponse,
+  DashboardInner,
   DowntimeDefect,
   FailureDefect,
   PerformanceResult,
@@ -84,7 +86,7 @@ export class DashboardService {
     });
 
     const dashboardDates = await Promise.all([...dashboardDatePromises]);
-    const defaultDashboard: DashboardBase = {
+    const defaultDashboard: DashboardInner = {
       actual: 0,
       availabilityIssue: {
         diffMins: 0,
@@ -117,6 +119,7 @@ export class DashboardService {
       endAt: null,
       bottleNeck: '',
       plan: 0,
+      isPaint: false,
     };
     if (!dashboardDates.length) return defaultDashboard;
     const dashboardDatesWithOutUndefined = dashboardDates.filter(
@@ -141,6 +144,7 @@ export class DashboardService {
       diffTime: dashboardWeek.performanceIssue.diffTime,
       totalDowntimeBottleNeck:
         dashboardWeek.performanceIssue.totalDowntimeBottleNeck,
+      isPaint: dashboardWeek.isPaint,
     });
     const oee = (availability * quality * performance) / Math.pow(100, 2);
 
@@ -155,9 +159,9 @@ export class DashboardService {
   }
 
   mappingDateToWeek(
-    prev: DashboardBase,
+    prev: DashboardInner,
     date: DashboardDateResponse,
-  ): DashboardBase {
+  ): DashboardInner {
     if (!prev.startAt || !prev.endAt) {
       prev.startAt = date.startAt;
       prev.endAt = date.endAt;
@@ -212,6 +216,7 @@ export class DashboardService {
         : prev.endAt,
       bottleNeck: date.bottleNeck,
       plan: date.plan + prev.plan,
+      isPaint: date.isPaint,
     };
   }
 
@@ -244,7 +249,10 @@ export class DashboardService {
     });
     if (!stationBottleNeck)
       throw new BadRequestException('station bottle neck is not exist');
-    // const dateNow = moment().set('h', 17).set('m', 0).toDate();
+    // const dateNow = moment('2023-03-23T03:30:24.406Z')
+    //   .set('h', 9)
+    //   .set('m', 20)
+    //   .toDate();
     const dateNow = moment().toDate();
     const isFuture = moment(dateNow).isBefore(timeShift.startDate);
     const isNowInTimeShiftRange = moment(dateNow).isBetween(
@@ -315,8 +323,8 @@ export class DashboardService {
     dateNow: Date,
     baseDate?: { startDate: Date; endDate: Date },
     workingTimeType?: WORKING_TIME_TYPE,
-  ): Promise<DashboardBase> {
-    const { failureDefect, failureTotal } = await this.mappingFailure(
+  ): Promise<DashboardInner> {
+    const { failureDefect, failureTotal, failures } = await this.mappingFailure(
       lineId,
       date,
     );
@@ -366,19 +374,22 @@ export class DashboardService {
       shift,
       timeShift: date,
       workingMin: workingTime.min,
-      failureDefect,
+      failureDefect: failures,
       isNowInTimeShiftRange,
       dateNow,
       isFuture,
       isPaint,
+      workingTimeType,
     });
 
     const diffTime = this.diffDowntimeStartAndEnd(
       date,
       shift,
+      workingTimeType,
       dateNow,
       isPaint,
       isFuture,
+      isNowInTimeShiftRange,
     );
     let plan;
     if (isPaint) {
@@ -417,6 +428,7 @@ export class DashboardService {
       endAt: date.endDate,
       bottleNeck: stationBottleNeck.stationId,
       plan,
+      isPaint,
     };
   }
 
@@ -439,7 +451,7 @@ export class DashboardService {
       where: {
         paintAt: { gte: start, lte: end },
         isPaintFinish: query.isPaintFinish,
-        model: { lineId: query.lineId },
+        paintLine: { lineId: query.lineId },
       },
     });
   }
@@ -466,6 +478,7 @@ export class DashboardService {
       isFuture: params.isFuture,
       isPaint: params.isPaint,
       isNowInTimeShiftRange: params.isNowInTimeShiftRange,
+      workingTimeType: params.workingTimeType,
     });
     const qualityIssue = await this.calculateQuality({
       actualFinishGood: params.actualFinishGood,
@@ -485,6 +498,8 @@ export class DashboardService {
       totalFailure: params.failureDefect.length,
       isPaint: params.isPaint,
       isNowInTimeShiftRange: params.isNowInTimeShiftRange,
+      failureDefect: params.failureDefect,
+      workingTimeType: params.workingTimeType,
     });
     const performance = performanceIssue?.result || 0;
     const quality = qualityIssue.result;
@@ -543,9 +558,11 @@ export class DashboardService {
     const diffMinuteBetweenStartAndIssueDate = this.diffDowntimeStartAndEnd(
       issueDate,
       params.shift,
+      params.workingTimeType,
       params.dateNow,
       params.isPaint,
       params.isFuture,
+      params.isNowInTimeShiftRange,
     );
     const availability = this.availabilityFormula(
       diffMinuteBetweenStartAndIssueDate,
@@ -567,6 +584,36 @@ export class DashboardService {
   async calculatePerformance(
     params: PerformanceParams,
   ): Promise<PerformanceResult> {
+    const diffTime = this.diffDowntimeStartAndEnd(
+      params.timeShift,
+      params.shift,
+      params.workingTimeType,
+      params.dateNow,
+      params.isPaint,
+      params.isFuture,
+      params.isNowInTimeShiftRange,
+    );
+
+    if (params.isPaint) {
+      const failureWithoutRT = params.failureDefect.filter(
+        (f) => f.failure.failureDetail.type !== 'RT',
+      );
+      const actualWithoutRT = params.actualFinishGood + failureWithoutRT.length;
+      const performance = this.performanceFormula({
+        actual: actualWithoutRT,
+        cycleTime: 0,
+        diffTime,
+        isPaint: params.isPaint,
+        totalDowntimeBottleNeck: 0,
+      });
+      return {
+        actual: actualWithoutRT,
+        bottleNeckCycleTime: 0,
+        diffTime: diffTime,
+        result: performance,
+        totalDowntimeBottleNeck: 0,
+      };
+    }
     const productInputOfBottleNeck =
       await this.prisma.productInputAmount.findFirst({
         where: {
@@ -590,13 +637,6 @@ export class DashboardService {
     if (params.isNowInTimeShiftRange) {
       params.timeShift.endDate = params.dateNow;
     }
-    const diffTime = this.diffDowntimeStartAndEnd(
-      params.timeShift,
-      params.shift,
-      params.dateNow,
-      params.isPaint,
-      params.isFuture,
-    );
     let actual: number;
     if (
       (stationThatDowntimeAfterBottleNeck.length &&
@@ -617,6 +657,7 @@ export class DashboardService {
       cycleTime: params.stationBottleNeck.cycleTime,
       diffTime: diffTime,
       totalDowntimeBottleNeck: params.totalDowntimeBottleNeck,
+      isPaint: params.isPaint,
     });
     return {
       diffTime,
@@ -627,7 +668,17 @@ export class DashboardService {
     };
   }
 
-  performanceFormula({ actual, cycleTime, diffTime, totalDowntimeBottleNeck }) {
+  performanceFormula({
+    actual,
+    cycleTime,
+    diffTime,
+    totalDowntimeBottleNeck,
+    isPaint,
+  }) {
+    if (isPaint) {
+      const paintPerformance = (actual * 100) / (diffTime / 2.33);
+      return Number(paintPerformance.toFixed(2));
+    }
     const actualOfBottleNeckPlan = Math.floor(
       (diffTime - totalDowntimeBottleNeck) / cycleTime,
     );
@@ -639,9 +690,11 @@ export class DashboardService {
   diffDowntimeStartAndEnd(
     { startDate, endDate }: FullDate,
     shift: SHIFT,
+    workingType: WORKING_TIME_TYPE,
     dateNow: Date,
     isPaint: boolean,
     isFuture: boolean,
+    isNowInTimeShiftRange: boolean,
   ) {
     if (isFuture) return 0;
     const breakTimeMinutes = getBreakTimeMinutes(
@@ -650,7 +703,25 @@ export class DashboardService {
       dateNow,
       startDate,
     );
-    return Math.floor(diffTimeAsMinutes(startDate, endDate) - breakTimeMinutes);
+    if (isNowInTimeShiftRange) {
+      endDate = dateNow;
+    }
+    let diffMinutes = Math.floor(
+      diffTimeAsMinutes(startDate, endDate) - breakTimeMinutes,
+    );
+
+    if (isPaint) {
+      if (shift === 'DAY') {
+        if (workingType === 'OVERTIME')
+          diffMinutes = diffMinutes > 514 ? 514 : diffMinutes;
+        else diffMinutes = diffMinutes > 362 ? 362 : diffMinutes;
+      } else {
+        if (workingType === 'OVERTIME')
+          diffMinutes = diffMinutes > 672 ? 672 : diffMinutes;
+        else diffMinutes = diffMinutes > 504 ? 504 : diffMinutes;
+      }
+    }
+    return diffMinutes;
   }
 
   async mappingDowntime(
@@ -683,7 +754,11 @@ export class DashboardService {
   async mappingFailure(
     lineId: number,
     { startDate, endDate }: { startDate: Date; endDate: Date },
-  ): Promise<{ failureDefect: FailureDefect[]; failureTotal: number }> {
+  ): Promise<{
+    failures: FullFailure[];
+    failureDefect: FailureDefect[];
+    failureTotal: number;
+  }> {
     const failures = await this.findAllFailureBetween(
       lineId,
       startDate,
@@ -716,6 +791,7 @@ export class DashboardService {
       0,
     );
     return {
+      failures,
       failureDefect,
       failureTotal,
     };
@@ -746,7 +822,13 @@ export class DashboardService {
         failure: { failureDetail: { lineId } },
       },
       include: {
-        failure: { include: { failureDetail: true, station: true } },
+        failure: {
+          include: {
+            failureDetail: true,
+            station: true,
+            extendedFailureDetail: true,
+          },
+        },
         product: true,
       },
     });

@@ -148,10 +148,17 @@ export function getBreakTimeMinutes(
 function calculateBreakTime(isNight: boolean, date: Date, dateNow: Date) {
   return (total, p) => {
     const startAt = setTimeByMoment(date, p.start.hour, p.start.minute);
+    // if (isNight) {
+    startAt.add(p.addDays, 'day');
+    // }
+
     if (moment(dateNow).isBefore(startAt)) return total;
     const endAt = setTimeByMoment(date, p.end.hour, p.end.minute);
-    if (isNight) endAt.add(1, 'day');
+    // if (isNight)
+    endAt.add(p.addDays, 'day');
+
     const isNowInBreakTime = moment(dateNow).isBetween(startAt, endAt);
+
     const diffTime = moment(isNowInBreakTime ? dateNow : endAt).diff(
       startAt,
       'minutes',
