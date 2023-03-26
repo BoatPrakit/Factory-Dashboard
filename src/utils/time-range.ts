@@ -118,6 +118,16 @@ export const TIME_RANGE = {
           minute: 0,
         },
       },
+      {
+        start: {
+          hour: 16,
+          minute: 30,
+        },
+        end: {
+          hour: 17,
+          minute: 0,
+        },
+      },
     ],
   },
   DAY_OT: {

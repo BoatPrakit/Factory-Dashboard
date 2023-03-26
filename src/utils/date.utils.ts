@@ -4,9 +4,13 @@ import { TIME_RANGE } from './time-range';
 import { FullDate } from './types/date.type';
 
 export function getStartDateAndEndDate(start: string, end?: string) {
+  const startDate = moment(start);
+  if (!isDayShift(startDate.toDate())) {
+    startDate.subtract(1, 'day');
+  }
   return {
-    startDate: moment(start).startOf('day').toDate(),
-    endDate: moment(end ? end : start)
+    startDate: startDate.startOf('day').toDate(),
+    endDate: moment(end ? end : startDate)
       .endOf('day')
       .toDate(),
   };
@@ -70,16 +74,16 @@ export function getShiftTimings(
   } else {
     endHour = NIGHT_NOT_OT.end.hour;
     endMinute = NIGHT_NOT_OT.end.minute;
-    const now = moment();
+    addDays = 1;
+    const now = moment(targetDate);
     const dayShiftStart = moment(now).set('hour', 7).set('minute', 30);
     const midnight = moment(now).set('hour', 0).set('minute', 0);
-    // console.log('mid', midnight);
-    // console.log('dayStart', dayShiftStart);
-    // console.log(now.toDate());
-    if (now.isBetween(midnight, dayShiftStart)) {
-      // console.log('is between');
-      addDays = 1;
-      reduceDays = 1;
+    const hour = now.get('hour');
+    if (hour >= 0 && hour < 8) {
+      if (now.isBetween(midnight, dayShiftStart)) {
+        reduceDays = 1;
+        addDays = 0;
+      }
     }
     if (workingTime === 'OVERTIME') {
       startHour = NIGHT_OT.start.hour;
@@ -110,8 +114,8 @@ export function getShiftTimings(
 
   const endDate = moment(targetDate);
   endDate.hours(endHour);
-  endDate.minutes(endMinute - 1);
-  endDate.seconds(59);
+  endDate.minutes(endMinute);
+  endDate.seconds(0);
   endDate.milliseconds(0);
 
   if (shift === 'NIGHT' && addDays > 0) {
@@ -125,13 +129,25 @@ export function getShiftTimings(
   return { startDate: startDate.toDate(), endDate: endDate.toDate() };
 }
 
-export function getCurrentShift(currentTime: Date): SHIFT {
-  const hour = moment(currentTime).hour();
+function isDayShift(targetDate: Date) {
+  const date = moment(targetDate);
+  const hour = date.hour();
+  const dayShiftStart = moment(date).set('hour', 7).set('minute', 30);
 
   if (
     hour >= TIME_RANGE.DAY_OT.start.hour &&
-    hour < TIME_RANGE.NIGHT_OT.start.hour
+    hour < TIME_RANGE.NIGHT_OT.start.hour &&
+    date.isAfter(dayShiftStart)
   ) {
+    return true;
+  }
+  return false;
+}
+
+export function getCurrentShift(currentTime: Date): SHIFT {
+  const now = moment(currentTime);
+
+  if (isDayShift(now.toDate())) {
     return 'DAY';
   } else {
     return 'NIGHT';
@@ -189,7 +205,7 @@ export function isDateToday(targetDate: Date) {
 }
 
 export function isNowInTimeShiftRange(startDate: Date, endDate: Date) {
-  return moment().isBetween(startDate, endDate);
+  return moment('2023-03-26T17:30:24.406Z').isBetween(startDate, endDate);
 }
 
 export function getStartEndDateCurrentShift(
