@@ -1,10 +1,11 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { GetProductDto } from './dto/get-product.dto';
 import { InputProductAmountDto } from './dto/input-product-amount.dto';
 import { GetProductInputDto } from './dto/get-product-input.dto';
 import { UpdateProductPaintDto } from './dto/update-product-paint.dto';
+import { DeleteProductDto } from './dto/delete-product.dto';
 
 @Controller('product')
 export class ProductController {
@@ -44,5 +45,10 @@ export class ProductController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.productService.findOne(+id);
+  }
+
+  @Post('/delete/all')
+  async deleteAll(@Body() payload: DeleteProductDto) {
+    return await this.productService.deleteProductsBetween(payload);
   }
 }

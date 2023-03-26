@@ -7,6 +7,7 @@ import {
   getStartEndDateCurrentShift,
 } from 'src/utils/date.utils';
 import { CreateProductDto } from './dto/create-product.dto';
+import { DeleteProductDto } from './dto/delete-product.dto';
 import { GetProductInputDto } from './dto/get-product-input.dto';
 import { GetProductDto } from './dto/get-product.dto';
 import { InputProductAmountDto } from './dto/input-product-amount.dto';
@@ -421,6 +422,30 @@ export class ProductService {
         take: pagination.take,
         page: pagination.page,
       },
+    };
+  }
+
+  async deleteProductsBetween(payload: DeleteProductDto) {
+    const date = getStartDateAndEndDate(payload.startAt, payload.endAt);
+    const timeStampCondition = { gte: date.startDate, lte: date.endDate };
+    const productHaveFailure = await this.prisma.productHaveFailure.deleteMany({
+      where: { timestamp: timeStampCondition },
+    });
+    const productionPlan = await this.prisma.productionPlan.deleteMany({
+      where: { timestamp: timeStampCondition },
+    });
+    const product = await this.prisma.product.deleteMany({
+      where: { timestamp: timeStampCondition },
+    });
+    const downtime = await this.prisma.downtime.deleteMany({
+      where: { startAt: timeStampCondition },
+    });
+    return {
+      date,
+      productHaveFailure: productHaveFailure.count,
+      productionPlan: productionPlan.count,
+      product: product.count,
+      downtime: downtime.count,
     };
   }
 }

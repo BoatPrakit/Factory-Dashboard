@@ -697,12 +697,10 @@ export class DashboardService {
     isNowInTimeShiftRange: boolean,
   ) {
     if (isFuture) return 0;
-    const breakTimeMinutes = getBreakTimeMinutes(
-      shift,
-      isPaint,
-      dateNow,
+    const breakTimeMinutes = getBreakTimeMinutes(shift, isPaint, dateNow, {
       startDate,
-    );
+      endDate,
+    });
     if (isNowInTimeShiftRange) {
       endDate = dateNow;
     }

@@ -158,7 +158,7 @@ export function getBreakTimeMinutes(
   shift: SHIFT,
   isPaint: boolean,
   dateNow: Date,
-  date?: Date,
+  timeShift: FullDate,
 ): number {
   const { DAY_BREAK, NIGHT_BREAK } = TIME_RANGE;
   let issueArray: any[] = DAY_BREAK.normal;
@@ -171,21 +171,29 @@ export function getBreakTimeMinutes(
     if (isPaint) issueArray = NIGHT_BREAK.paint;
   }
   const breakTimeMinutes = issueArray.reduce(
-    calculateBreakTime(isNight, date, dateNow),
+    calculateBreakTime(isNight, timeShift, dateNow),
     0,
   );
   return breakTimeMinutes;
 }
 
-function calculateBreakTime(isNight: boolean, date: Date, dateNow: Date) {
+function calculateBreakTime(isNight: boolean, date: FullDate, dateNow: Date) {
   return (total, p) => {
-    const startAt = setTimeByMoment(date, p.start.hour, p.start.minute);
+    const startAt = setTimeByMoment(
+      date.startDate,
+      p.start.hour,
+      p.start.minute,
+    );
     // if (isNight) {
     startAt.add(p.addDays, 'day');
     // }
 
-    if (moment(dateNow).isBefore(startAt)) return total;
-    const endAt = setTimeByMoment(date, p.end.hour, p.end.minute);
+    const endAt = setTimeByMoment(date.startDate, p.end.hour, p.end.minute);
+    if (
+      moment(dateNow).isBefore(startAt) ||
+      moment(endAt).isAfter(date.endDate)
+    )
+      return total;
     // if (isNight)
     endAt.add(p.addDays, 'day');
 

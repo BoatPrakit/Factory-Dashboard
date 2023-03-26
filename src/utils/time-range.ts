@@ -40,6 +40,28 @@ export const TIME_RANGE = {
         },
         addDays: 1,
       },
+      {
+        start: {
+          hour: 0,
+          minute: 30,
+        },
+        end: {
+          hour: 0,
+          minute: 40,
+        },
+        addDays: 1,
+      },
+      {
+        start: {
+          hour: 5,
+          minute: 30,
+        },
+        end: {
+          hour: 5,
+          minute: 40,
+        },
+        addDays: 1,
+      },
     ],
   },
   DAY_BREAK: {
