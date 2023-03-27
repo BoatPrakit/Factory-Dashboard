@@ -37,8 +37,8 @@ export class AlertService {
       where: { lineId },
     });
     if (!lineName) return;
-    const criteria = CRITERIA.find(
-      (c) => c.lineName.toLowerCase() === lineName.toLowerCase(),
+    const criteria = CRITERIA.find((c) =>
+      lineName.toLowerCase().includes(c.id.toLowerCase()),
     );
     if (!criteria) return;
 
