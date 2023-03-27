@@ -281,7 +281,7 @@ export class ProductService {
     return paintProduct;
   }
 
-  async getProductInput(payload: GetProductInputDto) {
+  async getProductInput(lineId: number, payload: GetProductInputDto) {
     const timeShift = getStartEndDateCurrentShift(
       new Date(payload.date),
       false,
@@ -289,6 +289,7 @@ export class ProductService {
     return await this.prisma.productInputAmount.findFirst({
       where: {
         position: payload.position,
+        station: { lineId },
         date: { gte: timeShift.startDate, lte: timeShift.endDate },
       },
     });

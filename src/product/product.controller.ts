@@ -32,9 +32,12 @@ export class ProductController {
     return await this.productService.inputProductAmount(payload);
   }
 
-  @Post('get/input-amount')
-  async getProductInput(@Body() payload: GetProductInputDto) {
-    return await this.productService.getProductInput(payload);
+  @Post('get/input-amount/:lineId')
+  async getProductInput(
+    @Param('lineId') lineId: number,
+    @Body() payload: GetProductInputDto,
+  ) {
+    return await this.productService.getProductInput(lineId, payload);
   }
 
   @Get()
