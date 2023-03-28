@@ -249,10 +249,11 @@ export class DashboardService {
     });
     if (!stationBottleNeck)
       throw new BadRequestException('station bottle neck is not exist');
-    // const dateNow = moment('2023-03-26T17:30:24.406Z')
-    //   .set('h', 0)
-    //   .set('m', 30)
+    // const dateNow = moment('2023-03-27T03:30:24.406Z')
+    //   .set('h', 11)
+    //   .set('m', 50)
     //   .toDate();
+    // console.log(dateNow);
     const dateNow = moment().toDate();
     const isFuture = moment(dateNow).isBefore(timeShift.startDate);
     const isNowInTimeShiftRange = moment(dateNow).isBetween(
@@ -279,6 +280,7 @@ export class DashboardService {
       endAt: timeShift.endDate,
     };
   }
+
   async mappingWorkingTime(
     lineId: number,
     date: {
@@ -595,19 +597,19 @@ export class DashboardService {
     );
 
     if (params.isPaint) {
-      const failureWithoutRT = params.failureDefect.filter(
-        (f) => f.failure.failureDetail.type !== 'RT',
-      );
-      const actualWithoutRT = params.actualFinishGood + failureWithoutRT.length;
+      // const failureWithoutRT = params.failureDefect.filter(
+      //   (f) => f.failure.failureDetail.type !== 'RT',
+      // );
+      const allProduct = params.actualFinishGood + params.failureDefect.length;
       const performance = this.performanceFormula({
-        actual: actualWithoutRT,
+        actual: allProduct,
         cycleTime: 0,
         diffTime,
         isPaint: params.isPaint,
         totalDowntimeBottleNeck: 0,
       });
       return {
-        actual: actualWithoutRT,
+        actual: allProduct,
         bottleNeckCycleTime: 0,
         diffTime: diffTime,
         result: performance,
@@ -707,16 +709,15 @@ export class DashboardService {
     let diffMinutes = Math.floor(
       diffTimeAsMinutes(startDate, endDate) - breakTimeMinutes,
     );
-
     if (isPaint) {
       if (shift === 'DAY') {
         if (workingType === 'OVERTIME')
-          diffMinutes = diffMinutes > 514 ? 514 : diffMinutes;
-        else diffMinutes = diffMinutes > 362 ? 362 : diffMinutes;
+          diffMinutes = diffMinutes > 254 ? 254 : diffMinutes;
+        else diffMinutes = diffMinutes > 180 ? 180 : diffMinutes;
       } else {
         if (workingType === 'OVERTIME')
-          diffMinutes = diffMinutes > 672 ? 672 : diffMinutes;
-        else diffMinutes = diffMinutes > 504 ? 504 : diffMinutes;
+          diffMinutes = diffMinutes > 334 ? 334 : diffMinutes;
+        else diffMinutes = diffMinutes > 250 ? 250 : diffMinutes;
       }
     }
     return diffMinutes;

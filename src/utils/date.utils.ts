@@ -184,9 +184,11 @@ function calculateBreakTime(isNight: boolean, date: FullDate, dateNow: Date) {
       p.start.hour,
       p.start.minute,
     );
-    // if (isNight) {
+
     startAt.add(p.addDays, 'day');
-    // }
+    if (p.reduceStart) {
+      startAt.subtract(p.reduceStart, 'day');
+    }
 
     const endAt = setTimeByMoment(date.startDate, p.end.hour, p.end.minute);
     if (
