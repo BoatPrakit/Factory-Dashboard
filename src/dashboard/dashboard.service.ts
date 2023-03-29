@@ -51,15 +51,12 @@ export class DashboardService {
     year,
     shift,
   }: DashboardMonthDto): Promise<DashboardBase> {
-    const startDate = moment([year, month - 1])
-      .startOf('month')
-      .toDate()
-      .toISOString();
-    const endDate = moment(startDate).endOf('month').toDate().toISOString();
-    const date = getStartDateAndEndDate(startDate, endDate);
+    const startDate = moment([year, month - 1]).startOf('month');
+    const endDate = moment(startDate).endOf('month');
+    // const date = getStartDateAndEndDate(startDate, endDate);
     const dashboardWeekDto = new DashboardWeekDto();
-    dashboardWeekDto.endDate = date.endDate.toISOString();
-    dashboardWeekDto.startDate = date.startDate.toISOString();
+    dashboardWeekDto.endDate = endDate.toISOString();
+    dashboardWeekDto.startDate = startDate.toISOString();
     dashboardWeekDto.lineId = lineId;
     dashboardWeekDto.shift = shift;
     const baseDashboard = await this.getDashboardByWeek(dashboardWeekDto);
@@ -74,7 +71,6 @@ export class DashboardService {
         moment(dashboardWeekDto.startDate),
         'd',
       ) + 1;
-
     const dashboardDatePromises = new Array(days).fill(1).map((date, index) => {
       const dateDto = new DashboardDateDto();
       dateDto.lineId = dashboardWeekDto.lineId;
@@ -254,6 +250,7 @@ export class DashboardService {
     //   .set('m', 50)
     //   .toDate();
     // console.log(dateNow);
+
     const dateNow = moment().toDate();
     const isFuture = moment(dateNow).isBefore(timeShift.startDate);
     const isNowInTimeShiftRange = moment(dateNow).isBetween(

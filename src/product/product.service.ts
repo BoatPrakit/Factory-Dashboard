@@ -369,18 +369,27 @@ export class ProductService {
     endAt,
     startAt,
   }: GetProductDto) {
-    const now = new Date().toISOString();
-    const date = getStartDateAndEndDate(startAt || now, endAt);
+    const line = await this.prisma.line.findUnique({
+      where: { lineId },
+    });
+    if (!line) {
+      throw new BadRequestException('line id not exist');
+    }
+
+    const isPaint = line.lineName.toLowerCase().includes('paint');
     const productsWithOutFilter = await this.prisma.product.findMany({
       where: {
-        timestamp: { gte: date.startDate, lte: date.endDate },
-        model: { lineId },
+        timestamp: { gte: startAt, lte: endAt },
+        paintLineId: isPaint ? lineId : undefined,
+        model: !isPaint ? { lineId } : undefined,
       },
     });
+
     const products = await this.prisma.product.findMany({
       where: {
-        timestamp: { gte: date.startDate, lte: date.endDate },
-        model: { lineId },
+        timestamp: { gte: startAt, lte: endAt },
+        paintLineId: isPaint ? lineId : undefined,
+        model: !isPaint ? { lineId } : undefined,
       },
       include: {
         model: { include: { line: true } },
@@ -403,7 +412,7 @@ export class ProductService {
     const responseProducts = products.map((p) => ({
       pinStampNumber: p.serialNumber,
       model: p.model.modelName,
-      status: p.isGoods,
+      status: isPaint ? p.isPaintFinish : p.isGoods,
       defectType: p.productHaveFailure.length
         ? p.productHaveFailure[0].failure.failureDetail.type
         : '',

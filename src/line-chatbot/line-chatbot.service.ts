@@ -10,29 +10,30 @@ export class LineChatbotService {
 
   async reply(payload: LineEvent) {
     console.log(payload);
-    const dataString = JSON.stringify({
-      replyToken: payload.replyToken,
-      messages: [
-        {
-          type: 'text',
-          text: 'Hello, user',
-        },
-        {
-          type: 'text',
-          text: 'May I help you?',
-        },
-      ],
-    });
-
-    // Request header
-    await axiosLineInstance.post('/message/reply', dataString);
+    if (payload?.replyToken) {
+      const dataString = JSON.stringify({
+        replyToken: payload.replyToken,
+        messages: [
+          {
+            type: 'text',
+            text: 'Hello, user',
+          },
+          {
+            type: 'text',
+            text: 'May I help you?',
+          },
+        ],
+      });
+      // Request header
+      await axiosLineInstance.post('/message/reply', dataString);
+    }
   }
 
   async pushMessage(messages: LineMessage[]) {
     if (!messages?.length) return;
-    const groupId = 'C3a469b13c0cfcb567f85725eb09082e5';
+    const lineId = process.env.LINE_ID || 'C3a469b13c0cfcb567f85725eb09082e5';
     const dataString = JSON.stringify({
-      to: groupId,
+      to: lineId,
       messages,
     });
     await axiosLineInstance.post('/message/push', dataString);

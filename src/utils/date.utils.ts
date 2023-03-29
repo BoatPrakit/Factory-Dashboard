@@ -2,12 +2,10 @@ import { SHIFT, WORKING_TIME_TYPE } from '@prisma/client';
 import * as moment from 'moment';
 import { TIME_RANGE } from './time-range';
 import { FullDate } from './types/date.type';
+import * as _ from 'lodash';
 
 export function getStartDateAndEndDate(start: string, end?: string) {
-  const startDate = moment(start);
-  if (!isDayShift(startDate.toDate())) {
-    startDate.subtract(1, 'day');
-  }
+  const startDate = moment(new Date(start));
   return {
     startDate: startDate.startOf('day').toDate(),
     endDate: moment(end ? end : startDate)
@@ -132,12 +130,16 @@ export function getShiftTimings(
 function isDayShift(targetDate: Date) {
   const date = moment(targetDate);
   const hour = date.hour();
-  const dayShiftStart = moment(date).set('hour', 7).set('minute', 30);
+  const dayShiftStart = moment(date)
+    .set('hour', 7)
+    .set('minute', 30)
+    .set('seconds', 0)
+    .set('millisecond', 0);
 
   if (
     hour >= TIME_RANGE.DAY_OT.start.hour &&
     hour < TIME_RANGE.NIGHT_OT.start.hour &&
-    date.isAfter(dayShiftStart)
+    date.isSameOrAfter(dayShiftStart)
   ) {
     return true;
   }
