@@ -253,7 +253,7 @@ export class ProductService {
                 connect: { workingTimeId: workingTime.workingTimeId },
               },
             },
-            where: { employeeShiftId: employeeShift.employeeShiftId },
+            where: { employeeShiftId: employeeShift?.employeeShiftId || -1 },
           },
         },
       },
