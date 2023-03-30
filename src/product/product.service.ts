@@ -71,10 +71,10 @@ export class ProductService {
         existProduct,
       );
     }
-    await this.alertService.alertWhenBelowCriteria(
-      model.lineId,
-      createProductDto.timestamp,
-    );
+    // await this.alertService.alertWhenBelowCriteria(
+    //   model.lineId,
+    //   createProductDto.timestamp,
+    // );
     return product;
   }
 
@@ -188,10 +188,10 @@ export class ProductService {
           paintAt: payload.paintAt,
         },
       });
-      await this.alertService.alertWhenBelowCriteria(
-        payload.lineId,
-        payload.paintAt,
-      );
+      // await this.alertService.alertWhenBelowCriteria(
+      //   payload.lineId,
+      //   payload.paintAt,
+      // );
       return product;
     }
     if (!employee) throw new BadRequestException('need employee information');
@@ -274,10 +274,10 @@ export class ProductService {
         timestamp: payload.paintAt,
       },
     });
-    await this.alertService.alertWhenBelowCriteria(
-      payload.lineId,
-      payload.paintAt,
-    );
+    // await this.alertService.alertWhenBelowCriteria(
+    //   payload.lineId,
+    //   payload.paintAt,
+    // );
     return paintProduct;
   }
 

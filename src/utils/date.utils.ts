@@ -216,8 +216,12 @@ export function isDateToday(targetDate: Date) {
   return isToday;
 }
 
-export function isNowInTimeShiftRange(startDate: Date, endDate: Date) {
-  return moment().isBetween(startDate, endDate);
+export function isNowInTimeShiftRange(
+  startDate: Date,
+  endDate: Date,
+  targetDate?: Date,
+) {
+  return moment(targetDate).isBetween(startDate, endDate);
 }
 
 export function getStartEndDateCurrentShift(

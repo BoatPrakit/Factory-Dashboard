@@ -95,10 +95,10 @@ export class DowntimeService {
         },
       },
     });
-    await this.alertService.alertWhenBelowCriteria(
-      station.lineId,
-      createDowntimeDto.startAt,
-    );
+    // await this.alertService.alertWhenBelowCriteria(
+    //   station.lineId,
+    //   createDowntimeDto.startAt,
+    // );
     return downtime;
   }
 }

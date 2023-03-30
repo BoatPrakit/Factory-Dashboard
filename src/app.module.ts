@@ -17,6 +17,7 @@ import { AuthModule } from './auth/auth.module';
 import { LineChatbotModule } from './line-chatbot/line-chatbot.module';
 import { AlertModule } from './alert/alert.module';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { ConfigModule } from '@nestjs/config';
     AuthModule,
     LineChatbotModule,
     AlertModule,
+    ScheduleModule.forRoot(),
   ],
   controllers: [AppController],
   providers: [AppService],
