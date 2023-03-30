@@ -20,12 +20,12 @@ export class ProductionPlanScheduler {
     private alertService: AlertService,
   ) {}
 
-  @Cron('0 * * * * *', {
+  @Cron(CronExpression.EVERY_HOUR, {
     name: 'alert',
     timeZone: 'Asia/Bangkok',
   })
   async handleCron() {
-    // console.log('fired!');
+    console.log('fired!', new Date());
     const now = moment();
     const currentShift = getCurrentShift(now.toDate());
     const date = getStartDateAndEndDate(now.toISOString());
