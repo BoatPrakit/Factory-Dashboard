@@ -423,6 +423,7 @@ export class ProductService {
       employee: p.productHaveFailure.length
         ? p.productHaveFailure[0].failure.employeeShift.employee.employeeName
         : '',
+      timeStamp: isPaint ? p.paintAt : p.timestamp,
     }));
     return {
       products: responseProducts,
