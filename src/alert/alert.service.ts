@@ -58,7 +58,7 @@ export class AlertService {
     const metrics = [
       { name: 'Availability', value: availability },
       { name: 'Performance', value: performance },
-      { name: 'Quality Rate', value: quality },
+      { name: 'Quality', value: quality },
       { name: 'OEE', value: oee },
     ];
     let lowerMetricsStr = '';
