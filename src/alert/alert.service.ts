@@ -20,26 +20,27 @@ export class AlertService {
   ) {}
 
   async alertWhenBelowCriteria(lineId: number, targetDate: string) {
-    const line = await this.prisma.line.findUnique({
-      where: { lineId },
-    });
-    const isPaint = line.lineName.toLowerCase().includes('paint');
-    // const mockDate = new Date('2023-03-26T17:30:24.406Z');
-    const now = new Date(targetDate);
-    const currentShift = getCurrentShift(now);
-    const timeShift = getShiftTimings(currentShift, 'OVERTIME', isPaint);
-    const isNowInTimeShift = isNowInTimeShiftRange(
-      timeShift.startDate,
-      timeShift.endDate,
-    );
-    if (!isNowInTimeShift) return;
     const { lineName } = await this.prisma.line.findUnique({
       where: { lineId },
     });
     if (!lineName) return;
-    const criteria = CRITERIA.find((c) =>
-      lineName.toLowerCase().includes(c.id.toLowerCase()),
+    const isPaint = lineName.toLowerCase().includes('paint');
+    // const mockDate = new Date('2023-03-26T17:30:24.406Z');
+    const now = new Date(targetDate);
+    const currentShift = getCurrentShift(now);
+    const timeShift = getShiftTimings(currentShift, 'OVERTIME', isPaint, now);
+    const isNowInTimeShift = isNowInTimeShiftRange(
+      timeShift.startDate,
+      timeShift.endDate,
+      now,
     );
+    if (!isNowInTimeShift) return;
+    const criteria = CRITERIA.find((c) => {
+      if (!isPaint) {
+        const frame = lineName.split(' ');
+        return c.id.toLowerCase().includes(frame[1].toLowerCase());
+      } else return lineName.toLowerCase().includes(c.id.toLowerCase());
+    });
     if (!criteria) return;
 
     const dashboardDate = await this.dashboardService.getDashboardByDate({
