@@ -1,4 +1,5 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
+import { WORKING_TIME_TYPE } from '@prisma/client';
 import { DashboardService } from 'src/dashboard/dashboard.service';
 import { LineChatbotService } from 'src/line-chatbot/line-chatbot.service';
 import { LineMessage } from 'src/line-chatbot/types/line-message.type';
@@ -19,7 +20,11 @@ export class AlertService {
     private lineChatBotService: LineChatbotService,
   ) {}
 
-  async alertWhenBelowCriteria(lineId: number, targetDate: string) {
+  async alertWhenBelowCriteria(
+    lineId: number,
+    targetDate: string,
+    workingTimeType: WORKING_TIME_TYPE,
+  ) {
     const { lineName } = await this.prisma.line.findUnique({
       where: { lineId },
     });
@@ -28,7 +33,12 @@ export class AlertService {
     // const mockDate = new Date('2023-03-26T17:30:24.406Z');
     const now = new Date(targetDate);
     const currentShift = getCurrentShift(now);
-    const timeShift = getShiftTimings(currentShift, 'OVERTIME', isPaint, now);
+    const timeShift = getShiftTimings(
+      currentShift,
+      workingTimeType,
+      isPaint,
+      now,
+    );
     const isNowInTimeShift = isNowInTimeShiftRange(
       timeShift.startDate,
       timeShift.endDate,

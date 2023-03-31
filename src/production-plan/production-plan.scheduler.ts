@@ -43,6 +43,7 @@ export class ProductionPlanScheduler {
         await this.alertService.alertWhenBelowCriteria(
           plan.lineId,
           now.toISOString(),
+          plan.workingTime.type,
         );
       }
     }
