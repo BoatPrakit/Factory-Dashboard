@@ -44,6 +44,7 @@ export function getShiftTimings(
   let endMinute: number;
   let addDays = 0;
   let reduceDays = 0;
+  let addStartDays = 0;
   const { DAY_NOT_OT, DAY_OT, NIGHT_NOT_OT, NIGHT_OT } = TIME_RANGE;
 
   if (shift === 'DAY') {
@@ -79,6 +80,7 @@ export function getShiftTimings(
     const hour = now.get('hour');
     if (hour >= 0 && hour < 8) {
       if (now.isBetween(midnight, dayShiftStart)) {
+        console.log(false);
         reduceDays = 1;
         addDays = 0;
       }
@@ -97,6 +99,7 @@ export function getShiftTimings(
         startHour = NIGHT_OT.paint.start.hour;
         startMinute = NIGHT_OT.paint.start.minute;
       } else {
+        addStartDays = 1;
         startHour = NIGHT_NOT_OT.paint.start.hour;
         startMinute = NIGHT_NOT_OT.paint.start.minute;
       }
@@ -120,8 +123,13 @@ export function getShiftTimings(
     endDate.add(addDays, 'day');
   }
 
-  if (shift === 'NIGHT' && reduceDays > 0) {
-    startDate.subtract(reduceDays, 'day');
+  if (shift === 'NIGHT') {
+    if (reduceDays > 0) {
+      startDate.subtract(reduceDays, 'day');
+    }
+    if (addStartDays > 0) {
+      startDate.add(addStartDays, 'day');
+    }
   }
 
   return { startDate: startDate.toDate(), endDate: endDate.toDate() };
