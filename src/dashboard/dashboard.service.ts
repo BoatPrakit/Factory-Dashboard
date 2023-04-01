@@ -675,7 +675,7 @@ export class DashboardService {
     isPaint,
   }) {
     if (isPaint) {
-      const paintPerformance = (actual * 100) / (diffTime / 2.33);
+      const paintPerformance = (actual * 100) / Math.floor(diffTime / 2.33);
       return Number(paintPerformance.toFixed(2));
     }
     const actualOfBottleNeckPlan = Math.floor(
