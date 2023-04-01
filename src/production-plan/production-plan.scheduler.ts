@@ -20,13 +20,13 @@ export class ProductionPlanScheduler {
     private alertService: AlertService,
   ) {}
 
-  @Cron(CronExpression.EVERY_30_SECONDS, {
+  @Cron(CronExpression.EVERY_HOUR, {
     name: 'alert',
     timeZone: 'Asia/Bangkok',
   })
   async handleCron() {
     console.log('fired!', new Date());
-    const now = moment();
+    const now = moment('2023-03-31T17:30:24.406Z');
     const currentShift = getCurrentShift(now.toDate());
     const date = getStartDateAndEndDate(now.toISOString());
     if (currentShift === 'NIGHT') {
