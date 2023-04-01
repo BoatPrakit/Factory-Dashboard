@@ -22,8 +22,9 @@ export class AlertService {
 
   async alertWhenBelowCriteria(
     lineId: number,
-    targetDate: string,
+    targetDate: Date,
     workingTimeType: WORKING_TIME_TYPE,
+    dateNow?: Date,
   ) {
     const { lineName } = await this.prisma.line.findUnique({
       where: { lineId },
@@ -31,7 +32,7 @@ export class AlertService {
     if (!lineName) return;
     const isPaint = lineName.toLowerCase().includes('paint');
     // const mockDate = new Date('2023-03-26T17:30:24.406Z');
-    const now = new Date(targetDate);
+    const now = new Date(dateNow);
     const currentShift = getCurrentShift(now);
     const timeShift = getShiftTimings(
       currentShift,
@@ -56,7 +57,7 @@ export class AlertService {
     const dashboardDate = await this.dashboardService.getDashboardByDate({
       lineId,
       shift: currentShift,
-      targetDate: now.toISOString(),
+      targetDate: targetDate.toISOString(),
     });
     const buildMessages = this.buildMessages(dashboardDate, criteria);
     await this.lineChatBotService.pushMessage(buildMessages);

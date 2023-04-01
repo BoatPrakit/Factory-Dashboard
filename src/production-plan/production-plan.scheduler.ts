@@ -7,7 +7,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import {
   getCurrentShift,
   getStartDateAndEndDate,
-  getStartEndDateCurrentShift,
+  isNowAfterMidnight,
 } from 'src/utils/date.utils';
 import { ProductionPlanService } from './production-plan.service';
 
@@ -29,6 +29,11 @@ export class ProductionPlanScheduler {
     const now = moment();
     const currentShift = getCurrentShift(now.toDate());
     const date = getStartDateAndEndDate(now.toISOString());
+    if (currentShift === 'NIGHT') {
+      if (isNowAfterMidnight(now.toDate())) {
+        date.startDate = moment(date.startDate).subtract(4, 'hours').toDate();
+      }
+    }
     const productionPlanPromises = new Array(3).fill(null).map((p, index) => {
       return this.productionPlanService.findProductionPlansByDate(
         index + 1,
@@ -42,8 +47,9 @@ export class ProductionPlanScheduler {
         const plan = plans[0];
         await this.alertService.alertWhenBelowCriteria(
           plan.lineId,
-          now.toISOString(),
+          date.startDate,
           plan.workingTime.type,
+          now.toDate(),
         );
       }
     }

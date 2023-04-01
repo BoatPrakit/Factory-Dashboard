@@ -10,11 +10,15 @@ export type DowntimeDefect = {
   details: string;
   station: string;
   downtime: number;
+  extendedCauseDigit: string;
+  extendedCauseDetails: string;
 };
 
 export type FailureDefect = {
   type: string;
   details: string;
+  extendedDetails: string;
+  extendedDetailId: string;
   station: string;
   sum: number;
 };

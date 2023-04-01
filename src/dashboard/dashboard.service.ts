@@ -735,6 +735,8 @@ export class DashboardService {
         downtime: d.duration.toNumber(),
         id: d.availabilityId,
         station: d.stationId,
+        extendedCauseDetails: d.extendedCause?.details,
+        extendedCauseDigit: d.extendedCause?.digit,
       }),
     );
     const downtimeTotal = downtimeDefect.reduce(
@@ -775,6 +777,8 @@ export class DashboardService {
     const failureDefect = distinctDefect.map(
       (defect): FailureDefect => ({
         details: defect.failure.failureDetail.details,
+        extendedDetails: defect.failure?.extendedFailureDetail?.details,
+        extendedDetailId: defect.failure?.extendedFailureId,
         station: defect.failure.station.stationName,
         sum: countFailureDetails.find(
           (count) => +count.failureDetailId === defect.failure.failureDetailId,
@@ -803,7 +807,7 @@ export class DashboardService {
         station: { lineId: lineId },
         startAt: { gte: startDate, lte: endDate },
       },
-      include: { availabilityLose: true },
+      include: { availabilityLose: true, extendedCause: true },
     });
   }
 

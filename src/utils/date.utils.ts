@@ -80,7 +80,6 @@ export function getShiftTimings(
     const hour = now.get('hour');
     if (hour >= 0 && hour < 8) {
       if (now.isBetween(midnight, dayShiftStart)) {
-        console.log(false);
         reduceDays = 1;
         addDays = 0;
       }
@@ -135,20 +134,33 @@ export function getShiftTimings(
   return { startDate: startDate.toDate(), endDate: endDate.toDate() };
 }
 
-function isDayShift(targetDate: Date) {
-  const date = moment(targetDate);
-  const hour = date.hour();
+export function isNowAfterMidnight(date: Date) {
+  const hour = date.getHours();
+  const now = moment(date);
   const dayShiftStart = moment(date)
     .set('hour', 7)
     .set('minute', 30)
     .set('seconds', 0)
     .set('millisecond', 0);
+  if (hour >= 0 && now.isBefore(dayShiftStart)) {
+    return true;
+  } else false;
+}
 
-  if (
-    hour >= TIME_RANGE.DAY_OT.start.hour &&
-    hour < TIME_RANGE.NIGHT_OT.start.hour &&
-    date.isSameOrAfter(dayShiftStart)
-  ) {
+export function isDayShift(targetDate: Date) {
+  const date = moment(targetDate);
+  const dayShiftStart = moment(date)
+    .set('hour', 7)
+    .set('minute', 30)
+    .set('seconds', 0)
+    .set('millisecond', 0);
+  const dayShiftEnd = moment(date)
+    .set('hour', 19)
+    .set('minute', 59)
+    .set('seconds', 59)
+    .set('millisecond', 999);
+
+  if (date.isBetween(dayShiftStart, dayShiftEnd)) {
     return true;
   }
   return false;

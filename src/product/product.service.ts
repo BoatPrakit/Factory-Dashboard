@@ -379,7 +379,8 @@ export class ProductService {
     const isPaint = line.lineName.toLowerCase().includes('paint');
     const productsWithOutFilter = await this.prisma.product.findMany({
       where: {
-        timestamp: { gte: startAt, lte: endAt },
+        paintAt: isPaint ? { gte: startAt, lte: endAt } : undefined,
+        timestamp: !isPaint ? { gte: startAt, lte: endAt } : undefined,
         paintLineId: isPaint ? lineId : undefined,
         model: !isPaint ? { lineId } : undefined,
       },
@@ -387,7 +388,8 @@ export class ProductService {
 
     const products = await this.prisma.product.findMany({
       where: {
-        timestamp: { gte: startAt, lte: endAt },
+        paintAt: isPaint ? { gte: startAt, lte: endAt } : undefined,
+        timestamp: !isPaint ? { gte: startAt, lte: endAt } : undefined,
         paintLineId: isPaint ? lineId : undefined,
         model: !isPaint ? { lineId } : undefined,
       },
@@ -398,6 +400,7 @@ export class ProductService {
             failure: {
               include: {
                 failureDetail: true,
+                extendedFailureDetail: true,
                 employeeShift: { include: { employee: true } },
               },
             },
@@ -419,6 +422,9 @@ export class ProductService {
       operation: p.model.line.lineName,
       failureDetail: p.productHaveFailure.length
         ? p.productHaveFailure[0].failure.failureDetail.details
+        : '',
+      extendedFailureDetail: p.productHaveFailure.length
+        ? p.productHaveFailure[0].failure.extendedFailureDetail?.details
         : '',
       employee: p.productHaveFailure.length
         ? p.productHaveFailure[0].failure.employeeShift.employee.employeeName
