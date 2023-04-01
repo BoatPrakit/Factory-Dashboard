@@ -710,11 +710,11 @@ export class DashboardService {
       if (shift === 'DAY') {
         if (workingType === 'OVERTIME')
           diffMinutes = diffMinutes > 254 ? 254 : diffMinutes;
-        else diffMinutes = diffMinutes > 180 ? 180 : diffMinutes;
+        else diffMinutes = diffMinutes > 179 ? 179 : diffMinutes;
       } else {
         if (workingType === 'OVERTIME')
-          diffMinutes = diffMinutes > 334 ? 334 : diffMinutes;
-        else diffMinutes = diffMinutes > 250 ? 250 : diffMinutes;
+          diffMinutes = diffMinutes > 333 ? 333 : diffMinutes;
+        else diffMinutes = diffMinutes > 249 ? 249 : diffMinutes;
       }
     }
     return diffMinutes;
