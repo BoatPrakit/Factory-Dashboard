@@ -20,7 +20,7 @@ export class ProductionPlanScheduler {
     private alertService: AlertService,
   ) {}
 
-  @Cron(CronExpression.EVERY_HOUR, {
+  @Cron(CronExpression.EVERY_30_SECONDS, {
     name: 'alert',
     timeZone: 'Asia/Bangkok',
   })
@@ -31,7 +31,8 @@ export class ProductionPlanScheduler {
     const date = getStartDateAndEndDate(now.toISOString());
     if (currentShift === 'NIGHT') {
       if (isNowAfterMidnight(now.toDate())) {
-        date.startDate = moment(date.startDate).subtract(4, 'hours').toDate();
+        date.startDate = moment(date.startDate).subtract(1, 'day').toDate();
+        date.endDate = moment(date.endDate).subtract(1, 'day').toDate();
       }
     }
     const productionPlanPromises = new Array(3).fill(null).map((p, index) => {
