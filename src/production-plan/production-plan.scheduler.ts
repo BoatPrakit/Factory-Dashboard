@@ -26,7 +26,7 @@ export class ProductionPlanScheduler {
   })
   async handleCron() {
     console.log('fired!', new Date());
-    const now = moment('2023-03-31T17:30:24.406Z');
+    const now = moment();
     const currentShift = getCurrentShift(now.toDate());
     const date = getStartDateAndEndDate(now.toISOString());
     if (currentShift === 'NIGHT') {
